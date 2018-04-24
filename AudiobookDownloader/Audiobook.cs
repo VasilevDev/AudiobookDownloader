@@ -7,10 +7,12 @@ using System.Threading.Tasks;
 
 namespace AudiobookDownloader
 {
-	class Audiobook
+	class AudioBook
 	{
 		public int Id { get; set; }
 		public string Url { get; set; }
 		public string Title { get; set; }
+
+		public List<AudioFile> Files { get; set; }
 	}
 }
