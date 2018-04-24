@@ -19,7 +19,7 @@ namespace AudiobookDownloader.Service
 		private readonly AbookUploadHandler _handler;
 
 		private List<Category> _categories;
-		private List<Audiobook> _books;
+		private List<AudioBook> _books;
 
 		private readonly string _baseUrl;
 
@@ -49,7 +49,7 @@ namespace AudiobookDownloader.Service
 		/// </summary>
 		/// <param name="categoryName">Название категории из которой получаем аудиокниги</param>
 		/// <returns>Список аудиокниг</returns>
-		public async Task<List<Audiobook>> GetAudiobooks(string categoryName)
+		public async Task<List<AudioBook>> GetAudiobooks(string categoryName)
 		{
 			Category category = null;
 
@@ -71,33 +71,30 @@ namespace AudiobookDownloader.Service
 			return _books;
 		}
 
-		// Метод скачивания аудиокниги по ее названию, 
+		// Метод скачивания аудиокниги по ее названию
 		public async void DownloadAudioBook(string title)
 		{
-			Audiobook audiobook = new Audiobook();
-			string bookUrl = string.Empty;
+			AudioBook audiobook = null;
 
 			foreach (var item in _books)
 			{
 				if(item.Title == title)
 				{
-					bookUrl = item.Url;
+					audiobook = item;
 					break;
 				}
 			}
 
-			if (bookUrl == null)
+			if (audiobook == null)
 				return;
 
-			string pageOfAudiobook = await _downloader.DownloadHtml(bookUrl);
+			string pageOfAudiobook = await _downloader.DownloadHtml(audiobook.Url);
 			var linkByDownload = _parser.AudiobookIdParse(pageOfAudiobook);
 
 			Uri uri = new Uri(linkByDownload.GetAttribute("href"));
 			string id = HttpUtility.ParseQueryString(uri.Query).Get("book_id");
 
 			audiobook.Id = Convert.ToInt32(id);
-			audiobook.Title = title;
-			audiobook.Url = bookUrl;
 
 			_handler.Upload(audiobook);
 		}

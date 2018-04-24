@@ -12,7 +12,7 @@ namespace AudiobookDownloader.Repositories
 			_connectionString = ConfigurationManager.ConnectionStrings["OwnRadio"].ConnectionString;
 		}
 
-		public void Add(Audiobook book)
+		public void Add(AudioBook book)
 		{
 			using(var connection = new NpgsqlConnection(_connectionString))
 			{
@@ -25,7 +25,7 @@ namespace AudiobookDownloader.Repositories
 			}
 		}
 
-		public Audiobook Get(int id)
+		public AudioBook Get(int id)
 		{
 			return null;
 		}
