@@ -13,14 +13,16 @@ namespace AudiobookDownloader.Handlers
 	{
 		private readonly AudioBookRepository _repos;
 		private readonly Downloader _downloader;
+		private readonly OwnRadioClient _radio;
 
 		public AbookUploadHandler()
 		{
 			_repos = new AudioBookRepository();
 			_downloader = new Downloader();
+			_radio = new OwnRadioClient();
 		}
 
-		public async void Upload(Audiobook audiobook)
+		public async void Upload(AudioBook audiobook)
 		{
 			var downloadAudiobook = await _downloader.DownloadFile($"https://1abooks.zone/download/{audiobook.Id}");
 
@@ -34,12 +36,15 @@ namespace AudiobookDownloader.Handlers
 				downloadAudiobook.CopyTo(fs);
 			}
 
-			UnpackArchive("Archives.zip", $"Audiobooks/{audiobook.Title}");
-			UploadFiles($"Audiobooks/{audiobook.Title}");
+			audiobook.Files = UnpackArchive("Archives.zip", $"Audiobooks/{audiobook.Title}");
+
+			UploadAudioBook(audiobook);
 		}
 
-		private void UnpackArchive(string src, string dest)
+		private List<AudioFile> UnpackArchive(string src, string dest)
 		{
+			List<AudioFile> audioFiles = new List<AudioFile>();
+
 			if (!Directory.Exists(dest))
 			{
 				Directory.CreateDirectory(dest);
@@ -54,17 +59,27 @@ namespace AudiobookDownloader.Handlers
 					item.ExtractToFile($"{dest}/{item.Name}", true);
 				}
 			}
-		}
 
-		private void UploadFiles(string src)
-		{
-			var files = Directory.GetFiles(src);
+			DirectoryInfo di = new DirectoryInfo(dest);
+			var files = di.GetFiles("*.mp3");
+			int count = 0;
 
 			foreach (var file in files)
 			{
-				//TODO: проверить отправлялся ли данный файл
-
+				audioFiles.Add(new AudioFile
+				{
+					Id = ++count,
+					Name = file.Name,
+					Content = File.ReadAllBytes($"{dest}/{file.Name}")
+				});
 			}
+
+			return audioFiles;
+		}
+
+		private async void UploadAudioBook(AudioBook audiobook)
+		{
+			await _radio.Upload(audiobook);
 		}
 	}
 }
