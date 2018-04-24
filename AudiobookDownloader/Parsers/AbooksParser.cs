@@ -61,16 +61,15 @@ namespace AudiobookDownloader.Core
 		/// </summary>
 		/// <param name="htmlDocument">Разметка</param>
 		/// <returns>Список аудиокниг</returns>
-		public List<Audiobook> AudiobooksParse(string htmlDocument)
+		public List<AudioBook> AudiobooksParse(string htmlDocument)
 		{
-			List<Audiobook> _books = new List<Audiobook>();
+			List<AudioBook> _books = new List<AudioBook>();
 			var listOfBooks = Parse(htmlDocument, "post-desc");
 
 			foreach (var item in listOfBooks)
 			{
-				var book = new Audiobook
+				var book = new AudioBook
 				{
-					Id = 1, //TODO
 					Title = item.GetElementsByClassName("entry-title")[0].TextContent,
 					Url = item.GetElementsByClassName("post-more")[0].GetAttribute("href")
 				};
