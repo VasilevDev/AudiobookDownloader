@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -14,14 +13,30 @@ namespace AudiobookDownloader
 			_client = new HttpClient();
 		}
 
-		public async Task<bool> Upload(AudioBook audiobook)
+		public async Task<HttpStatusCode> Upload(int bookId, AudioFile audioFile)
 		{
-			foreach (var file in audiobook.Files)
+			var form = new MultipartFormDataContent {
+				{ new StringContent(bookId.ToString()), "bookid" },
+				{ new StringContent(audioFile.Name), "recname" },
+				{ new StringContent(audioFile.Id.ToString()), "fileid" }, //TODO
+				{ new ByteArrayContent(audioFile.Content, 0, audioFile.Content.Length), "audiobookFile", audioFile.Name }
+			};
+
+			/*
+					"tablename":"tracks",
+					"method": "upload",
+					"params": {
+						"bookid": bookId.ToString(),
+						"recname": audioFile.Name,
+						"fileId": audioFile.Id.ToString(),
+						"content": file
+					}
+			*/
+
+			using (var response = await _client.PostAsync($"http://localhost:55607/api/execute/js", form).ConfigureAwait(false)) //TODO
 			{
-				Debug.Print($"Отправили файл {file.Name} с id {file.Id} размером {file.Content.Length} байт");
+				return response.StatusCode;
 			}
-			
-			return false;
 		}
 	}
 }
