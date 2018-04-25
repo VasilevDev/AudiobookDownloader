@@ -1,28 +1,22 @@
-﻿using AudiobookDownloader.Repositories;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace AudiobookDownloader.Handlers
 {
 	class AbookUploadHandler
 	{
-		private readonly AudioBookRepository _repos;
 		private readonly Downloader _downloader;
 		private readonly OwnRadioClient _radio;
 
 		public AbookUploadHandler()
 		{
-			_repos = new AudioBookRepository();
 			_downloader = new Downloader();
 			_radio = new OwnRadioClient();
 		}
 
-		public async void Upload(AudioBook audiobook)
+		public async Task<bool> Upload(AudioBook audiobook)
 		{
 			var downloadAudiobook = await _downloader.DownloadFile($"https://1abooks.zone/download/{audiobook.Id}");
 
@@ -38,7 +32,7 @@ namespace AudiobookDownloader.Handlers
 
 			audiobook.Files = UnpackArchive("Archives.zip", $"Audiobooks/{audiobook.Title}");
 
-			UploadAudioBook(audiobook);
+			return await UploadAudioBook(audiobook);
 		}
 
 		private List<AudioFile> UnpackArchive(string src, string dest)
@@ -77,9 +71,18 @@ namespace AudiobookDownloader.Handlers
 			return audioFiles;
 		}
 
-		private async void UploadAudioBook(AudioBook audiobook)
+		private async Task<bool> UploadAudioBook(AudioBook audiobook)
 		{
-			await _radio.Upload(audiobook);
+			foreach (var file in audiobook.Files)
+			{
+				var res = await _radio.Upload(audiobook.Id, file);
+				if(res == System.Net.HttpStatusCode.Created)
+				{
+					//TODO
+				}
+			}
+
+			return false; //TODO
 		}
 	}
 }
