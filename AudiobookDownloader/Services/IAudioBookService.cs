@@ -8,9 +8,7 @@ namespace AudiobookDownloader.Service
 {
 	interface IAudioBookService
 	{
-		Task<List<Category>> GetCategories();
-		Task<List<AudioBook>> GetAudiobooks(string categoryName);
-
-		void DownloadAudioBook(string title);
+		Task<List<string>> GetCategories();
+		Task<bool> DownloadAudioBooks(string categoryName);
 	}
 }

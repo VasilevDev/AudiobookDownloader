@@ -1,5 +1,6 @@
 ﻿using AngleSharp.Dom;
 using AngleSharp.Parser.Html;
+using System;
 using System.Collections.Generic;
 
 namespace AudiobookDownloader.Core
@@ -16,7 +17,6 @@ namespace AudiobookDownloader.Core
 			parser = new HtmlParser();
 		}
 
-
 		#region Получение ссылки на скачивание трека
 		/// <summary>
 		/// Метод нахождения в разметке ссылки на трек с определенным id
@@ -31,13 +31,13 @@ namespace AudiobookDownloader.Core
 
 		#region Получение списка категорий
 		/// <summary>
-		/// Метод нахождения категорий  в HTML разметке
+		/// Метод нахождения категорий в HTML разметке
 		/// </summary>
 		/// <param name="htmlDocument">Разметка</param>
 		/// <returns>Список категорий</returns>
-		public List<Category> CategoriesParse(string htmlDocument)
+		public Dictionary<string, Category> CategoriesParse(string htmlDocument)
 		{
-			List<Category> _categories = new List<Category>();
+			Dictionary<string, Category> _categories = new Dictionary<string, Category>();
 			var listOfCategory = Parse(htmlDocument, "mfn-megamenu-title");
 
 			foreach (var item in listOfCategory)
@@ -48,7 +48,8 @@ namespace AudiobookDownloader.Core
 					Url = item.GetAttribute("href")
 				};
 
-				_categories.Add(category);
+				if(!_categories.ContainsKey(category.Name))
+					_categories.Add(category.Name, category);
 			}
 
 			return _categories;
@@ -80,6 +81,26 @@ namespace AudiobookDownloader.Core
 			return _books;
 		} 
 		#endregion
+
+		public int GetLastPageNumber(string htmlDocument)
+		{
+			var pages = Parse(htmlDocument, "page");
+			int lastPage = 1;
+
+			foreach (var page in pages)
+			{
+				if (page.TextContent == "...")
+					continue;
+
+				int pageNumber = Convert.ToInt32(page.TextContent);
+				if (pageNumber > lastPage)
+				{
+					lastPage = pageNumber;
+				}
+			}
+
+			return lastPage;
+		}
 
 		private IHtmlCollection<IElement> Parse(string htmlDocument, string selector)
 		{

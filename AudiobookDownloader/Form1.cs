@@ -13,17 +13,17 @@ namespace AudiobookDownloader
 {
 	public partial class Form1 : Form
 	{
-		private readonly AbooksService _aService;
+		private readonly AbooksService _abookService;
 
 		public Form1()
 		{
 			InitializeComponent();
-			_aService = new AbooksService();
+			_abookService = new AbooksService();
 		}
 
 		private async void AbooksBtn_Click(object sender, EventArgs e)
 		{
-			var _categories = await _aService.GetCategories();
+			var _categories = await _abookService.GetCategories();
 
 			if(_categories == null)
 			{
@@ -36,34 +36,31 @@ namespace AudiobookDownloader
 
 			foreach (var item in _categories)
 			{
-				ListOfCategories.Items.Add(item.Name);
+				ListOfCategories.Items.Add(item);
 			}
 		}
 
 		private async void ListOfCategories_DoubleClick(object sender, EventArgs e)
 		{
-			if (label.Text == "Книги")
+			bool res = await _abookService.DownloadAudioBooks(ListOfCategories.SelectedItem.ToString());
+
+			/*var _books = await _abookService.GetAudiobooks(ListOfCategories.SelectedItem.ToString());
+			string _books = null;
+
+			if (_books == null)
 			{
-				_aService.DownloadAudioBook(ListOfCategories.SelectedItem.ToString());
+				label.Text = "Ошибка получения книг";
+				return;
 			}
-			else
+
+			label.Text = $"Книги: {_books}";
+
+			ListOfCategories.Items.Clear();
+
+			foreach (var item in _books)
 			{
-				var _books = await _aService.GetAudiobooks(ListOfCategories.SelectedItem.ToString());
-
-				if (_books == null)
-				{
-					label.Text = "Ошибка получения книг";
-					return;
-				}
-
-				label.Text = "Книги";
-				ListOfCategories.Items.Clear();
-
-				foreach (var item in _books)
-				{
-					ListOfCategories.Items.Add(item.Title);
-				}
-			}
+				ListOfCategories.Items.Add(item);
+			}*/
 		}
 	}
 }

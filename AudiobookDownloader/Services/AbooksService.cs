@@ -10,7 +10,7 @@ using AudiobookDownloader.Handlers;
 namespace AudiobookDownloader.Service
 {
 	/// <summary>
-	/// Класс сервиса для скачивания аудиокниг с сайта https://1abooks.zone
+	/// Класс сервиса для скачивания аудиокниг с сайта https://1abooks.zone и их последующей загрузке на сервер Rdev
 	/// </summary>
 	internal class AbooksService : IAudioBookService
 	{
@@ -18,8 +18,7 @@ namespace AudiobookDownloader.Service
 		private readonly AbooksParser _parser;
 		private readonly AbookUploadHandler _handler;
 
-		private List<Category> _categories;
-		private List<AudioBook> _books;
+		private Dictionary<string, Category> _categories;
 
 		private readonly string _baseUrl;
 
@@ -35,68 +34,52 @@ namespace AudiobookDownloader.Service
 		/// <summary>
 		/// Метод получения списка категорий
 		/// </summary>
-		/// <returns></returns>
-		public async Task<List<Category>> GetCategories()
+		/// <returns>Список названий категорий</returns>
+		public async Task<List<string>> GetCategories()
 		{
 			string homePage = await _downloader.DownloadHtml(_baseUrl);
 			_categories = _parser.CategoriesParse(homePage);
 
-			return _categories;
+			return new List<string>(_categories.Keys);
 		}
 
 		/// <summary>
-		/// Метод получения списка аудиокниг
+		/// Метод загрузки аудиокниг
 		/// </summary>
-		/// <param name="categoryName">Название категории из которой получаем аудиокниги</param>
-		/// <returns>Список аудиокниг</returns>
-		public async Task<List<AudioBook>> GetAudiobooks(string categoryName)
+		/// <param name="categoryName">Название категории из которой загружаются аудиокниги</param>
+		public async Task<bool> DownloadAudioBooks(string categoryName)
 		{
-			Category category = null;
-
-			foreach (var item in _categories)
-			{
-				if (item.Name == categoryName)
-				{
-					category = item;
-					break;
-				}
-			}
+			Category category = _categories[categoryName];
 
 			if (category == null)
-				return null;
+				return false;
 
 			string pageOfCategory = await _downloader.DownloadHtml(category.Url);
-			_books = _parser.AudiobooksParse(pageOfCategory);
+			int countPages = _parser.GetLastPageNumber(pageOfCategory);
 
-			return _books;
-		}
-
-		// Метод скачивания аудиокниги по ее названию
-		public async void DownloadAudioBook(string title)
-		{
-			AudioBook audiobook = null;
-
-			foreach (var item in _books)
+			for (int i = 1; i <= countPages; i++)
 			{
-				if(item.Title == title)
-				{
-					audiobook = item;
-					break;
-				}
+				string page = await _downloader.DownloadHtml($"{category.Url}/page/{i}");
+				var books = _parser.AudiobooksParse(page);
+
+				UploadAudioBooks(books);
 			}
 
-			if (audiobook == null)
-				return;
+			return true;
+		}
 
-			string pageOfAudiobook = await _downloader.DownloadHtml(audiobook.Url);
-			var linkByDownload = _parser.AudiobookIdParse(pageOfAudiobook);
+		private async void UploadAudioBooks(List<AudioBook> audioBooks)
+		{
+			foreach (var audioBook in audioBooks)
+			{
+				string pageOfAudiobook = await _downloader.DownloadHtml(audioBook.Url);
+				var linkByDownload = _parser.AudiobookIdParse(pageOfAudiobook);
 
-			Uri uri = new Uri(linkByDownload.GetAttribute("href"));
-			string id = HttpUtility.ParseQueryString(uri.Query).Get("book_id");
+				string id = HttpUtility.ParseQueryString(new Uri(linkByDownload.GetAttribute("href")).Query).Get("book_id");
 
-			audiobook.Id = Convert.ToInt32(id);
-
-			_handler.Upload(audiobook);
+				audioBook.Id = Convert.ToInt32(id);
+				_handler.Upload(audioBook);
+			}
 		}
 	}
 }
