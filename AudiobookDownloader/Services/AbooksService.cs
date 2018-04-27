@@ -1,84 +1,83 @@
-﻿using AudiobookDownloader.Core;
-using System.Web;
+﻿using System.Web;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
-using AudiobookDownloader.Handlers;
+using AngleSharp.Parser.Html;
 
 namespace AudiobookDownloader.Service
 {
-	/// <summary>
-	/// Класс сервиса для скачивания аудиокниг с сайта https://1abooks.zone и их последующей загрузке на сервер Rdev
-	/// </summary>
-	internal class AbooksService : IAudioBookService
+	internal class AbooksService : IAudiobookService
 	{
-		private readonly Downloader _downloader;
-		private readonly AbooksParser _parser;
-		private readonly AbookUploadHandler _handler;
+		private const string _baseUrl = @"https://1abooks.zone/audiobooks";
+		private readonly HtmlParser _parser = new HtmlParser();
 
-		private Dictionary<string, Category> _categories;
-
-		private readonly string _baseUrl;
-
-		public AbooksService()
+		public async Task<List<Category>> GetCategories()
 		{
-			_downloader = new Downloader();
-			_parser = new AbooksParser();
-			_handler = new AbookUploadHandler();
-
-			_baseUrl = "https://1abooks.zone/audiobooks";
-		}
-
-		/// <summary>
-		/// Метод получения списка категорий
-		/// </summary>
-		/// <returns>Список названий категорий</returns>
-		public async Task<List<string>> GetCategories()
-		{
-			string homePage = await _downloader.DownloadHtml(_baseUrl);
-			_categories = _parser.CategoriesParse(homePage);
-
-			return new List<string>(_categories.Keys);
-		}
-
-		/// <summary>
-		/// Метод загрузки аудиокниг
-		/// </summary>
-		/// <param name="categoryName">Название категории из которой загружаются аудиокниги</param>
-		public async Task<bool> DownloadAudioBooks(string categoryName)
-		{
-			Category category = _categories[categoryName];
-
-			if (category == null)
-				return false;
-
-			string pageOfCategory = await _downloader.DownloadHtml(category.Url);
-			int countPages = _parser.GetLastPageNumber(pageOfCategory);
-
-			for (int i = 1; i <= countPages; i++)
+			using (var http = new HttpClient())
+			using (var response = await http.GetAsync(_baseUrl).ConfigureAwait(false))
 			{
-				string page = await _downloader.DownloadHtml($"{category.Url}/page/{i}");
-				var books = _parser.AudiobooksParse(page);
+				var html = await response.Content.ReadAsStringAsync();
+				var result = _parser.Parse(html);
+				var categories = result.GetElementsByClassName("mfn-megamenu-title");
 
-				UploadAudioBooks(books);
+				var list = new List<Category>();
+
+				foreach (var item in categories)
+				{
+					list.Add(new Category
+					{
+						Name = item.TextContent,
+						Url = item.GetAttribute("href")
+					});
+				}
+
+				return list;
 			}
-
-			return true;
 		}
 
-		private async void UploadAudioBooks(List<AudioBook> audioBooks)
+		public async Task<List<Audiobook>> GetAudiobooks(Category category, int page)
 		{
-			foreach (var audioBook in audioBooks)
+			using (var http = new HttpClient())
+			using (var response = await http.GetAsync($"{category.Url}/page/{page}").ConfigureAwait(false))
 			{
-				string pageOfAudiobook = await _downloader.DownloadHtml(audioBook.Url);
-				var linkByDownload = _parser.AudiobookIdParse(pageOfAudiobook);
+				var html = await response.Content.ReadAsStringAsync();
+				var result = _parser.Parse(html);
+				var audiobooks = result.GetElementsByClassName("post-desc");
 
-				string id = HttpUtility.ParseQueryString(new Uri(linkByDownload.GetAttribute("href")).Query).Get("book_id");
+				var list = new List<Audiobook>();
 
-				audioBook.Id = Convert.ToInt32(id);
-				_handler.Upload(audioBook);
+				foreach (var audiobook in audiobooks)
+				{
+					list.Add(new Audiobook
+					{
+						Title = audiobook.GetElementsByClassName("entry-title")[0].TextContent,
+						Url = audiobook.GetElementsByClassName("post-more")[0].GetAttribute("href")
+					});
+				}
+
+				return list;
+			}
+		}
+
+		public async Task GetAudiobook(Audiobook audiobook, Stream stream)
+		{
+			using (var http = new HttpClient())
+			using (var response = await http.GetAsync($"{audiobook.Url}").ConfigureAwait(false))
+			{
+				var html = await response.Content.ReadAsStringAsync();
+				var result = _parser.Parse(html);
+				string uri = result.GetElementsByClassName("button button_js button_green")[0].GetAttribute("href");
+				string id = HttpUtility.ParseQueryString(new Uri(uri).Query).Get("book_id");
+				
+				using (var book = await http.GetAsync($"https://1abooks.zone/download/{id}").ConfigureAwait(false))
+				{
+					using (var bs = await book.Content.ReadAsStreamAsync())
+					{
+						bs.CopyTo(stream);
+					}
+				}
 			}
 		}
 	}

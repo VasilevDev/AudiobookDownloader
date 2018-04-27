@@ -1,14 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace AudiobookDownloader.Service
 {
-	interface IAudioBookService
+	interface IAudiobookService
 	{
-		Task<List<string>> GetCategories();
-		Task<bool> DownloadAudioBooks(string categoryName);
+		Task<List<Category>> GetCategories();
+		Task<List<Audiobook>> GetAudiobooks(Category category, int page);
+		Task GetAudiobook(Audiobook audiobook, Stream stream);
 	}
 }
