@@ -3,19 +3,19 @@ using SQLite.CodeFirst;
 
 namespace AudiobookDownloader.DatabaseContext
 {
-	class SQLiteContext : DbContext
+	class Context : DbContext
 	{
-		public SQLiteContext()
+		public Context()
 			: base(@"AudioFileDb")
 		{
 
 		}
 
-		public DbSet<AudioBook> Audiobooks { get; set; }
+		public DbSet<Audiobook> Audiobook { get; set; }
 
 		protected override void OnModelCreating(DbModelBuilder modelBuilder)
 		{
-			var sqliteConnectionInitializer = new SqliteCreateDatabaseIfNotExists<SQLiteContext>(modelBuilder);
+			var sqliteConnectionInitializer = new SqliteCreateDatabaseIfNotExists<Context>(modelBuilder);
 			Database.SetInitializer(sqliteConnectionInitializer);
 		}
 	}
