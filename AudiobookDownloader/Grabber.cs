@@ -42,7 +42,7 @@ namespace AudiobookDownloader
 			{
 				using (var fs = new FileStream(_filename, FileMode.Create, FileAccess.ReadWrite))
 				{
-					//await _service.GetAudiobook(audiobook, fs);
+					await _service.GetAudiobook(audiobook, fs);
 					_db.DownloadAudiobook.Add(new DownloadAudiobook { Audiobook = audiobook });
 					await _db.SaveChangesAsync();
 				}
@@ -65,7 +65,7 @@ namespace AudiobookDownloader
 				_db.UploadAudiobook.Add(new UploadAudiobook { Audiobook = audiobook });
 				await _db.SaveChangesAsync();
 
-				/*
+				
 				using (var zip = ZipFile.OpenRead(_filename))
 				{
 					int chapter = 0;
@@ -84,7 +84,7 @@ namespace AudiobookDownloader
 							}
 						}
 					}
-				}*/
+				}
 			}
 		}
 	}
