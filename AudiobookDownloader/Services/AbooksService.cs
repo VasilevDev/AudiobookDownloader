@@ -106,5 +106,14 @@ namespace AudiobookDownloader.Service
 
 			return lastPage;
 		}
+
+		public Category GetNovelty()
+		{
+			return new Category
+			{
+				Name = "Новинки",
+				Url = "https://1abooks.zone"
+			};
+		}
 	}
 }

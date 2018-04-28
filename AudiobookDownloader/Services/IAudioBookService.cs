@@ -10,5 +10,6 @@ namespace AudiobookDownloader.Service
 		Task<List<Audiobook>> GetAudiobooks(Category category, int page);
 		Task GetAudiobook(Audiobook audiobook, Stream stream);
 		Task<int> GetPagesCount(Category category);
+		Category GetNovelty();
 	}
 }
