@@ -70,7 +70,7 @@ namespace AudiobookDownloader.Service
 				var result = _parser.Parse(html);
 				string uri = result.GetElementsByClassName("button button_js button_green")[0].GetAttribute("href");
 				string id = HttpUtility.ParseQueryString(new Uri(uri).Query).Get("book_id");
-				
+
 				using (var book = await http.GetAsync($"https://1abooks.zone/download/{id}").ConfigureAwait(false))
 				{
 					using (var bs = await book.Content.ReadAsStreamAsync())
@@ -79,6 +79,33 @@ namespace AudiobookDownloader.Service
 					}
 				}
 			}
+		}
+
+		public async Task<int> GetPagesCount(Category category)
+		{
+			int lastPage = 1;
+
+			using (var http = new HttpClient())
+			using (var response = await http.GetAsync(category.Url).ConfigureAwait(false))
+			{
+				var html = await response.Content.ReadAsStringAsync();
+				var result = _parser.Parse(html);
+				var pages = result.GetElementsByClassName("page");
+
+				foreach (var page in pages)
+				{
+					if (page.TextContent == "...")
+						continue;
+
+					int pageNumber = Convert.ToInt32(page.TextContent);
+					if (pageNumber > lastPage)
+					{
+						lastPage = pageNumber;
+					}
+				}
+			}
+
+			return lastPage;
 		}
 	}
 }

@@ -33,12 +33,19 @@ namespace AudiobookDownloader
 		private async void ListOfCategories_DoubleClick(object sender, EventArgs e)
 		{
 			var category = _categories.Find(c => c.Name == ListOfCategories.SelectedItem.ToString());
-			_audiobooks = await _service.GetAudiobooks(category, 1);
-			ListOfCategories.Items.Clear();
+			int countPages = await _service.GetPagesCount(category);
 
-			foreach (var audiobook in _audiobooks)
+			for (int page = 1; page <= countPages; page++)
 			{
-				await _grabber.Grab(audiobook);
+				_audiobooks = await _service.GetAudiobooks(category, page);
+
+				ListOfCategories.Items.Clear();
+
+				foreach (var audiobook in _audiobooks)
+				{
+					ListOfCategories.Items.Add($"Страница: {page} книга {audiobook.Title}");
+					await _grabber.Grab(audiobook);
+				}
 			}
 		}
 
