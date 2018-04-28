@@ -94,13 +94,12 @@ namespace AudiobookDownloader.Service
 
 				foreach (var page in pages)
 				{
-					if (page.TextContent == "...")
-						continue;
-
-					int pageNumber = Convert.ToInt32(page.TextContent);
-					if (pageNumber > lastPage)
+					if (Int32.TryParse(page.TextContent, out int pageNumber))
 					{
-						lastPage = pageNumber;
+						if (pageNumber > lastPage)
+						{
+							lastPage = pageNumber;
+						}
 					}
 				}
 			}
