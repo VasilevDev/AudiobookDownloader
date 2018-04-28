@@ -1,7 +1,10 @@
-﻿using AudiobookDownloader.Service;
+﻿using AudiobookDownloader.DatabaseContext;
+using AudiobookDownloader.Service;
 using System;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.IO.Compression;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace AudiobookDownloader
@@ -10,6 +13,8 @@ namespace AudiobookDownloader
 	{
 		private readonly IAudiobookService _service = new AbooksService();
 		private readonly Grabber _grabber;
+		private readonly Context _db;
+
 		private List<Category> _categories = new List<Category>();
 		private List<Audiobook> _audiobooks = new List<Audiobook>();
 
@@ -17,58 +22,49 @@ namespace AudiobookDownloader
 		{
 			InitializeComponent();
 			_grabber = new Grabber(_service);
+			_db = new Context();
 		}
 
 		private async void AbooksBtn_Click(object sender, EventArgs e)
 		{
-			_categories = await _service.GetCategories();
+			Category novelty = _service.GetNovelty();
 
-			label.Text = "Категории";
-			ListOfCategories.Items.Clear();
+			DownloadedPage downloadedPage = new DownloadedPage();
+			downloadedPage.PageNumber = await _service.GetPagesCount(novelty);
 
-			foreach (var item in _categories)
-				ListOfCategories.Items.Add(item.Name);
-		}
-
-		private async void ListOfCategories_DoubleClick(object sender, EventArgs e)
-		{
-			var category = _categories.Find(c => c.Name == ListOfCategories.SelectedItem.ToString());
-			int countPages = await _service.GetPagesCount(category);
-
-			for (int page = 1; page <= countPages; page++)
+			if (_db.DownloadedPage.Count() == 0)
 			{
-				_audiobooks = await _service.GetAudiobooks(category, page);
+				_db.DownloadedPage.Add(downloadedPage);
+				_db.SaveChanges();
+			}
+			else
+			{
+				var numbers = _db.DownloadedPage.Select(m => new { m.PageNumber }).ToList();
+
+				if (numbers.Count != 1)
+					return;
+
+				downloadedPage.PageNumber = numbers[0].PageNumber;
+			}
+
+			for (int page = downloadedPage.PageNumber; page >= 1; page--)
+			{
+				_audiobooks = await _service.GetAudiobooks(novelty, page);
+
+				if(downloadedPage.PageNumber != page)
+				{
+					downloadedPage.PageNumber = page;
+
+					_db.Entry(downloadedPage).State = EntityState.Modified;
+					_db.SaveChanges();
+				}
 
 				ListOfCategories.Items.Clear();
 
 				foreach (var audiobook in _audiobooks)
 				{
-					ListOfCategories.Items.Add($"Страница: {page} книга {audiobook.Title}");
 					await _grabber.Grab(audiobook);
-				}
-			}
-		}
-
-		private async void button1_Click(object sender, EventArgs e)
-		{
-			OwnRadioClient client = new OwnRadioClient();
-
-			Guid ownerRecId = Guid.NewGuid();
-
-			using (var zip = ZipFile.OpenRead("tmp.zip"))
-			{
-				int chapter = 0;
-
-				foreach (var entry in zip.Entries)
-				{
-					if (entry.FullName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
-					{
-						using (var fs = entry.Open())
-						{
-							Guid recId = Guid.NewGuid();
-							await client.Upload(fs, ++chapter, entry.Name, ownerRecId, recId);
-						}
-					}
+					ListOfCategories.Items.Add($"Загружена книга {audiobook.Title} со страницы {page}");
 				}
 			}
 		}
