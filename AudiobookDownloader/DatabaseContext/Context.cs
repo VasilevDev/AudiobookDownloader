@@ -6,15 +6,19 @@ namespace AudiobookDownloader.DatabaseContext
 	class Context : DbContext
 	{
 		public Context()
-			: base(@"AudioFileDb")
+			: base(@"AudiobookDb")
 		{
 
 		}
 
-		public DbSet<Audiobook> Audiobook { get; set; }
+		public DbSet<UploadAudiobook> UploadAudiobook { get; set; }
+		public DbSet<DownloadAudiobook> DownloadAudiobook { get; set; }
+
+		public DbSet<DownloadedPage> DownloadedPage { get; set; }
 
 		protected override void OnModelCreating(DbModelBuilder modelBuilder)
 		{
+			//SqliteCreateDatabaseIfNotExists SqliteDropCreateDatabaseAlways
 			var sqliteConnectionInitializer = new SqliteCreateDatabaseIfNotExists<Context>(modelBuilder);
 			Database.SetInitializer(sqliteConnectionInitializer);
 		}
