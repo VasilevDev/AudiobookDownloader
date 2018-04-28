@@ -35,7 +35,7 @@ namespace AudiobookDownloader
 			if (_db.DownloadedPage.Count() == 0)
 			{
 				_db.DownloadedPage.Add(downloadedPage);
-				_db.SaveChanges();
+				await _db.SaveChangesAsync();
 			}
 			else
 			{
@@ -56,7 +56,7 @@ namespace AudiobookDownloader
 					downloadedPage.PageNumber = page;
 
 					_db.Entry(downloadedPage).State = EntityState.Modified;
-					_db.SaveChanges();
+					await _db.SaveChangesAsync();
 				}
 
 				ListOfCategories.Items.Clear();

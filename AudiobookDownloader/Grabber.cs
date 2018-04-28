@@ -1,10 +1,10 @@
-﻿using AudiobookDownloader.Service;
+﻿using AudiobookDownloader.DatabaseContext;
+using AudiobookDownloader.Service;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace AudiobookDownloader
@@ -15,35 +15,76 @@ namespace AudiobookDownloader
 		private readonly OwnRadioClient _client = new OwnRadioClient();
 		private const string _filename = "tmp.zip";
 
+		private readonly Context _db;
+
 		public Grabber(IAudiobookService service)
 		{
 			_service = service;
+			_db = new Context();
 		}
 
 		public async Task Grab(Audiobook audiobook)
 		{
-			using (var fs = new FileStream(_filename, FileMode.Create, FileAccess.ReadWrite))
+			await DownloadAudiobook(audiobook);
+			await UploadAudiobook(audiobook);
+		}
+
+		private async Task DownloadAudiobook(Audiobook audiobook)
+		{
+			List<DownloadAudiobook> downloadList = null;
+
+			if (_db.DownloadAudiobook.Count() != 0)
 			{
-				await _service.GetAudiobook(audiobook, fs);
+				downloadList = _db.DownloadAudiobook.Where(m => m.Audiobook.Title == audiobook.Title && m.Audiobook.Url == audiobook.Url).ToList();
 			}
 
-			Guid ownerRecId = Guid.NewGuid();
-
-			using (var zip = ZipFile.OpenRead(_filename))
+			if (downloadList == null || downloadList.Count == 0)
 			{
-				int chapter = 0;
-
-				foreach (var entry in zip.Entries)
+				using (var fs = new FileStream(_filename, FileMode.Create, FileAccess.ReadWrite))
 				{
-					if (entry.FullName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
+					//await _service.GetAudiobook(audiobook, fs);
+					_db.DownloadAudiobook.Add(new DownloadAudiobook { Audiobook = audiobook });
+					await _db.SaveChangesAsync();
+				}
+			}
+		}
+
+		private async Task UploadAudiobook(Audiobook audiobook)
+		{
+			List<UploadAudiobook> uploadList = null;
+
+			if (_db.UploadAudiobook.Count() != 0)
+			{
+				uploadList = _db.UploadAudiobook.Where(m => m.Audiobook.Title == audiobook.Title && m.Audiobook.Url == audiobook.Url).ToList();
+			}
+
+			if (uploadList == null || uploadList.Count == 0)
+			{
+				Guid ownerRecId = Guid.NewGuid();
+
+				_db.UploadAudiobook.Add(new UploadAudiobook { Audiobook = audiobook });
+				await _db.SaveChangesAsync();
+
+				/*
+				using (var zip = ZipFile.OpenRead(_filename))
+				{
+					int chapter = 0;
+
+					foreach (var entry in zip.Entries)
 					{
-						using (var fs = entry.Open())
+						if (entry.FullName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
 						{
-							Guid recId = Guid.NewGuid();
-							await _client.Upload(fs, ++chapter, entry.Name, ownerRecId, recId);
+							using (var fs = entry.Open())
+							{
+								Guid recId = Guid.NewGuid();
+								await _client.Upload(fs, ++chapter, entry.Name, ownerRecId, recId);
+
+								_db.UploadAudiobook.Add(new UploadAudiobook { Audiobook = audiobook });
+								_db.SaveChanges();
+							}
 						}
 					}
-				}
+				}*/
 			}
 		}
 	}
