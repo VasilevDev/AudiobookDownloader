@@ -3,6 +3,7 @@ using AudiobookDownloader.Service;
 using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Linq;
 using System.Windows.Forms;
@@ -27,45 +28,43 @@ namespace AudiobookDownloader
 
 		private async void AbooksBtn_Click(object sender, EventArgs e)
 		{
-			Category novelty = _service.GetNovelty();
+			label.Text = "Загрузка аудиокниг запущена";
 
-			DownloadedPage downloadedPage = new DownloadedPage();
-			downloadedPage.PageNumber = await _service.GetPagesCount(novelty);
+			Category novelty = _service.GetNovelty();
+			int currentPage = 0;
+
+			DownloadedPage downloadedPage = new DownloadedPage() { Count = 0 };
+			int countPagesByPortal = await _service.GetPagesCount(novelty);
 
 			if (_db.DownloadedPage.Count() == 0)
 			{
+				currentPage = countPagesByPortal;
 				_db.DownloadedPage.Add(downloadedPage);
 				await _db.SaveChangesAsync();
 			}
 			else
 			{
-				var numbers = _db.DownloadedPage.Select(m => new { m.PageNumber }).ToList();
-
-				if (numbers.Count != 1)
-					return;
-
-				downloadedPage.PageNumber = numbers[0].PageNumber;
+				int countDownloadedPages = _db.DownloadedPage.Select(m => new { m.Count }).ToList()[0].Count;
+				currentPage = countPagesByPortal - countDownloadedPages;
 			}
 
-			for (int page = downloadedPage.PageNumber; page >= 1; page--)
+			int counter = 0;
+
+			for (int page = currentPage; page >= 1; page--)
 			{
 				_audiobooks = await _service.GetAudiobooks(novelty, page);
-
-				if(downloadedPage.PageNumber != page)
-				{
-					downloadedPage.PageNumber = page;
-
-					_db.Entry(downloadedPage).State = EntityState.Modified;
-					await _db.SaveChangesAsync();
-				}
-
-				ListOfCategories.Items.Clear();
 
 				foreach (var audiobook in _audiobooks)
 				{
 					await _grabber.Grab(audiobook);
 					ListOfCategories.Items.Add($"Загружена книга {audiobook.Title} со страницы {page}");
 				}
+
+				int countDownloadedPages = _db.DownloadedPage.Select(m => new { m.Count }).ToList()[0].Count;
+				downloadedPage.Count = countDownloadedPages + ++counter;
+
+				_db.Entry(downloadedPage).State = EntityState.Modified;
+				await _db.SaveChangesAsync();
 			}
 		}
 	}
