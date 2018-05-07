@@ -64,15 +64,17 @@ namespace AudiobookDownloader.Service
 		public async Task GetAudiobook(Audiobook audiobook, Stream stream)
 		{
 			using (var http = new HttpClient())
-			using (var response = await http.GetAsync($"{audiobook.Url}").ConfigureAwait(false))
 			{
-				var html = await response.Content.ReadAsStringAsync();
-				var result = _parser.Parse(html);
-				string uri = result.GetElementsByClassName("button button_js button_green")[0].GetAttribute("href");
-				string id = HttpUtility.ParseQueryString(new Uri(uri).Query).Get("book_id");
+				http.Timeout = TimeSpan.FromMinutes(60);
 
-				using (var book = await http.GetAsync($"https://1abooks.zone/download/{id}").ConfigureAwait(false))
+				using (var response = await http.GetAsync($"{audiobook.Url}").ConfigureAwait(false))
 				{
+					var html = await response.Content.ReadAsStringAsync();
+					var result = _parser.Parse(html);
+					string uri = result.GetElementsByClassName("button button_js button_green")[0].GetAttribute("href");
+					string id = HttpUtility.ParseQueryString(new Uri(uri).Query).Get("book_id");
+
+					using (var book = await http.GetAsync($"https://1abooks.zone/download/{id}").ConfigureAwait(false))
 					using (var bs = await book.Content.ReadAsStreamAsync())
 					{
 						bs.CopyTo(stream);
