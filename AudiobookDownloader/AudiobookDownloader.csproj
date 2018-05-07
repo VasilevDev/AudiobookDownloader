@@ -134,10 +134,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Audiobook.cs" />
+    <Compile Include="Audiofile.cs" />
     <Compile Include="Category.cs" />
     <Compile Include="DatabaseContext\DownloadAudiobook.cs" />
     <Compile Include="DatabaseContext\DownloadedPage.cs" />
     <Compile Include="DatabaseContext\UploadAudiobook.cs" />
+    <Compile Include="DatabaseContext\UploadAudiofile.cs" />
     <Compile Include="Grabber.cs" />
     <Compile Include="OwnRadioClient.cs" />
     <Compile Include="Form1.cs">

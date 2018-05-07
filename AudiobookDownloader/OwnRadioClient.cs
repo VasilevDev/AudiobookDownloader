@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
+using System.Configuration;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -11,13 +12,14 @@ namespace AudiobookDownloader
 	class OwnRadioClient
 	{
 		private readonly HttpClient _client;
+		private readonly string _connection = ConfigurationManager.ConnectionStrings["RdevServer"].ConnectionString;
 
 		public OwnRadioClient()
 		{
 			_client = new HttpClient();
 		}
 
-		public async Task<HttpStatusCode> Upload(Stream stream, int chapter, string fileName, Guid ownerRecId, Guid recId)
+		public async Task<HttpStatusCode> Upload(Audiofile file, Stream stream, Guid recid)
 		{
 			JObject request = new JObject();
 			byte[] bytes = null;
@@ -28,24 +30,24 @@ namespace AudiobookDownloader
 				bytes = memoryStream.ToArray();
 			}
 
-			if (chapter == 1)
-				recId = ownerRecId;
+			if (file.Chapter == 1)
+				recid = Guid.Parse(file.OwnerRecid);
 
 			request.Add("tablename", "tracks");
 			request.Add("method", "upload");
 			request.Add("params", new JObject() {
-					{"recid", recId.ToString()},
+					{"recid", recid.ToString()},
 					{"mediatype", "audiobook"},
-					{"chapter", chapter.ToString()},
-					{"recname", fileName},
-					{"ownerrecid", ownerRecId.ToString()},
+					{"chapter", file.Chapter.ToString()},
+					{"recname", $"{recid.ToString()}.mp3"},
+					{"ownerrecid", file.OwnerRecid},
 					{"content", Convert.ToBase64String(bytes)}
 				}
 			);
 
 			var content = new StringContent(request.ToString(), Encoding.UTF8, "application/json");
 
-			using (var response = await _client.PostAsync($"http://localhost:5001/api/executejs", content).ConfigureAwait(false))
+			using (var response = await _client.PostAsync(_connection, content).ConfigureAwait(false))
 			{
 				return response.StatusCode;
 			}

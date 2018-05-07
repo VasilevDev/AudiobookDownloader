@@ -11,6 +11,8 @@ namespace AudiobookDownloader.DatabaseContext
 
 		}
 
+		public DbSet<UploadAudiofile> UploadAudiofile { get; set; }
+
 		public DbSet<UploadAudiobook> UploadAudiobook { get; set; }
 		public DbSet<DownloadAudiobook> DownloadAudiobook { get; set; }
 
