@@ -42,7 +42,6 @@
 			this.ListOfCategories.ScrollAlwaysVisible = true;
 			this.ListOfCategories.Size = new System.Drawing.Size(718, 452);
 			this.ListOfCategories.TabIndex = 0;
-
 			// 
 			// AbooksBtn
 			// 
@@ -72,7 +71,7 @@
 			this.Controls.Add(this.ListOfCategories);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
 			this.Name = "Form1";
-			this.Text = "Form1";
+			this.Text = "Audiobook downloader";
 			this.ResumeLayout(false);
 			this.PerformLayout();
 
