@@ -5,12 +5,13 @@ using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using AngleSharp.Parser.Html;
+using System.Net;
 
 namespace AudiobookDownloader.Service
 {
 	internal class AbooksService : IAudiobookService
 	{
-		private const string _baseUrl = @"https://1abooks.zone/audiobooks";
+		private const string _baseUrl = @"https://aubooks.zone/audiobooks";
 		private readonly HtmlParser _parser = new HtmlParser();
 
 		public async Task<List<Category>> GetCategories()
@@ -63,29 +64,19 @@ namespace AudiobookDownloader.Service
 
 		public async Task GetAudiobook(Audiobook audiobook, Stream stream)
 		{
-			using (var http = new HttpClient())
-			{
-				http.Timeout = TimeSpan.FromMinutes(60);
+			int id = await GetAudiobookId(audiobook);
 
-				using (var response = await http.GetAsync($"{audiobook.Url}").ConfigureAwait(false))
-				{
-					var html = await response.Content.ReadAsStringAsync();
-					var result = _parser.Parse(html);
-					string uri = result.GetElementsByClassName("button button_js button_green")[0].GetAttribute("href");
-					string id = HttpUtility.ParseQueryString(new Uri(uri).Query).Get("book_id");
+			HttpWebRequest httpRequest = (HttpWebRequest) WebRequest.Create($"https://aubooks.zone/download/{id}");
+			httpRequest.Method = WebRequestMethods.Http.Get;
+			HttpWebResponse httpResponse = (HttpWebResponse)httpRequest.GetResponse();
+			Stream httpResponseStream = httpResponse.GetResponseStream();
 
-					using (var book = await http.GetAsync($"https://1abooks.zone/download/{id}").ConfigureAwait(false))
-					using (var bs = await book.Content.ReadAsStreamAsync())
-					{
-						bs.CopyTo(stream);
-					}
-				}
-			}
+			await httpResponseStream.CopyToAsync(stream);
 		}
 
 		public async Task<int> GetPagesCount(Category category)
 		{
-			int lastPage = 1;
+			int lastPage = 0;
 
 			using (var http = new HttpClient())
 			using (var response = await http.GetAsync(category.Url).ConfigureAwait(false))
@@ -109,13 +100,18 @@ namespace AudiobookDownloader.Service
 			return lastPage;
 		}
 
-		public Category GetNovelty()
+		public async Task<int> GetAudiobookId(Audiobook audiobook)
 		{
-			return new Category
+			using (var http = new HttpClient())
+			using (var response = await http.GetAsync($"{audiobook.Url}").ConfigureAwait(false))
 			{
-				Name = "Новинки",
-				Url = "https://1abooks.zone"
-			};
+				var html = await response.Content.ReadAsStringAsync();
+				var result = _parser.Parse(html);
+				string uri = result.GetElementsByClassName("button button_js button_green")[0].GetAttribute("href");
+				Int32.TryParse(HttpUtility.ParseQueryString(new Uri(uri).Query).Get("book_id"), out int id);
+
+				return id;
+			}
 		}
 	}
 }
