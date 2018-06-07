@@ -45,6 +45,7 @@ namespace AudiobookDownloader
 			request.Add("method", "uploadaudiofile");
 			request.Add("fields", new JObject() {
 					{"recid", recid.ToString()},
+					{"deviceid", "7fce47ab-4fa2-4b81-aa06-d49223442d07"},
 					{"mediatype", "audiobook"},
 					{"chapter", file.Chapter.ToString()},
 					{"recname", $"{recid.ToString()}.mp3"},
@@ -76,7 +77,8 @@ namespace AudiobookDownloader
 			request.Add("method", "downloadaudiobook");
 			request.Add("fields", new JObject() {
 					{"url", url},
-					{"name", name},
+					{"recname", name},
+					{"deviceid", "7fce47ab-4fa2-4b81-aa06-d49223442d07"},
 					{"downloadurl", downloadUrl}
 				}
 			);

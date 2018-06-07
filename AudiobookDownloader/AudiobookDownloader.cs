@@ -31,7 +31,7 @@ namespace AudiobookDownloader
 		{
 			try
 			{
-				var novelty = new Category { Name = "Новинки", Url = "https://aubooks.zone" };
+				var novelty = new Category { Name = "Новинки", Url = "https://aobooks.zone" };
 				int countPage = await _service.GetPagesCount(novelty);
 
 				label.Text = $"Запущена загрузка аудиокнги с сайта {novelty.Url}, количество страниц {countPage}.";
@@ -59,7 +59,7 @@ namespace AudiobookDownloader
 		{
 			try
 			{
-				var novelty = new Category { Name = "Новинки", Url = "https://aubooks.zone" };
+				var novelty = new Category { Name = "Новинки", Url = "https://aobooks.zone" };
 
 				int countPage = await _service.GetPagesCount(novelty);
 				var client = new OwnRadioClient();
@@ -81,7 +81,7 @@ namespace AudiobookDownloader
 						var result = await client.StartDownload(
 							audiobook.Title, 
 							audiobook.Url, 
-							$"https://aubooks.zone/download/{audiobookId}"
+							$"https://aobooks.zone/download/{audiobookId}"
 						);
 
 						if(result == System.Net.HttpStatusCode.BadRequest || result == System.Net.HttpStatusCode.NotFound)

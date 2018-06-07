@@ -11,7 +11,7 @@ namespace AudiobookDownloader.Service
 {
 	internal class AbooksService : IAudiobookService
 	{
-		private const string _baseUrl = @"https://aubooks.zone/audiobooks";
+		private const string _baseUrl = @"https://aobooks.zone/audiobooks";
 		private readonly HtmlParser _parser = new HtmlParser();
 
 		public async Task<List<Category>> GetCategories()
@@ -66,7 +66,7 @@ namespace AudiobookDownloader.Service
 		{
 			int id = await GetAudiobookId(audiobook);
 
-			HttpWebRequest httpRequest = (HttpWebRequest) WebRequest.Create($"https://aubooks.zone/download/{id}");
+			HttpWebRequest httpRequest = (HttpWebRequest) WebRequest.Create($"https://aobooks.zone/download/{id}");
 			httpRequest.Method = WebRequestMethods.Http.Get;
 			HttpWebResponse httpResponse = (HttpWebResponse)httpRequest.GetResponse();
 			Stream httpResponseStream = httpResponse.GetResponseStream();
