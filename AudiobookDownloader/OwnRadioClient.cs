@@ -46,6 +46,7 @@ namespace AudiobookDownloader
 			request.Add("fields", new JObject() {
 					{"recid", recid.ToString()},
 					{"deviceid", "7fce47ab-4fa2-4b81-aa06-d49223442d07"},
+					{"recdescription", file.AudiobookName},
 					{"mediatype", "audiobook"},
 					{"chapter", file.Chapter.ToString()},
 					{"recname", $"{recid.ToString()}.mp3"},

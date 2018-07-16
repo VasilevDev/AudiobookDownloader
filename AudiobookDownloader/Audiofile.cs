@@ -14,5 +14,6 @@ namespace AudiobookDownloader
 		public string Name { get; set; }
 		public string OwnerRecid { get; set; }
 		public string AudiobookUrl { get; set; }
+		public string AudiobookName { get; set; }
 	}
 }

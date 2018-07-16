@@ -33,6 +33,7 @@
 			this.label = new System.Windows.Forms.Label();
 			this.groupBox1 = new System.Windows.Forms.GroupBox();
 			this.rdevLoad = new System.Windows.Forms.Button();
+			this.dirUpload = new System.Windows.Forms.Button();
 			this.groupBox1.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -66,11 +67,12 @@
 			// 
 			// groupBox1
 			// 
+			this.groupBox1.Controls.Add(this.dirUpload);
 			this.groupBox1.Controls.Add(this.rdevLoad);
 			this.groupBox1.Controls.Add(this.AbooksBtn);
 			this.groupBox1.Location = new System.Drawing.Point(736, 44);
 			this.groupBox1.Name = "groupBox1";
-			this.groupBox1.Size = new System.Drawing.Size(207, 132);
+			this.groupBox1.Size = new System.Drawing.Size(207, 180);
 			this.groupBox1.TabIndex = 3;
 			this.groupBox1.TabStop = false;
 			this.groupBox1.Text = "Abooks";
@@ -85,11 +87,21 @@
 			this.rdevLoad.UseVisualStyleBackColor = true;
 			this.rdevLoad.Click += new System.EventHandler(this.rdevLoad_ClickAsync);
 			// 
+			// dirUpload
+			// 
+			this.dirUpload.Location = new System.Drawing.Point(6, 122);
+			this.dirUpload.Name = "dirUpload";
+			this.dirUpload.Size = new System.Drawing.Size(195, 45);
+			this.dirUpload.TabIndex = 3;
+			this.dirUpload.Text = "Загрузить из директории";
+			this.dirUpload.UseVisualStyleBackColor = true;
+			this.dirUpload.Click += new System.EventHandler(this.dirUpload_Click);
+			// 
 			// AudiobookDownloader
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(953, 511);
+			this.ClientSize = new System.Drawing.Size(950, 511);
 			this.Controls.Add(this.groupBox1);
 			this.Controls.Add(this.label);
 			this.Controls.Add(this.log);
@@ -109,6 +121,7 @@
 		private System.Windows.Forms.Label label;
 		private System.Windows.Forms.GroupBox groupBox1;
 		private System.Windows.Forms.Button rdevLoad;
+		private System.Windows.Forms.Button dirUpload;
 	}
 }
 

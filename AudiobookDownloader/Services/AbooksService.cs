@@ -79,19 +79,21 @@ namespace AudiobookDownloader.Service
 			int lastPage = 0;
 
 			using (var http = new HttpClient())
-			using (var response = await http.GetAsync(category.Url).ConfigureAwait(false))
 			{
-				var html = await response.Content.ReadAsStringAsync();
-				var result = _parser.Parse(html);
-				var pages = result.GetElementsByClassName("page");
-
-				foreach (var page in pages)
+				using (var response = await http.GetAsync(category.Url).ConfigureAwait(false))
 				{
-					if (Int32.TryParse(page.TextContent, out int pageNumber))
+					var html = await response.Content.ReadAsStringAsync();
+					var result = _parser.Parse(html);
+					var pages = result.GetElementsByClassName("page");
+
+					foreach (var page in pages)
 					{
-						if (pageNumber > lastPage)
+						if (Int32.TryParse(page.TextContent, out int pageNumber))
 						{
-							lastPage = pageNumber;
+							if (pageNumber > lastPage)
+							{
+								lastPage = pageNumber;
+							}
 						}
 					}
 				}
