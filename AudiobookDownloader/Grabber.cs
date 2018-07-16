@@ -1,4 +1,5 @@
 ﻿using AudiobookDownloader.DatabaseContext;
+using AudiobookDownloader.Repository;
 using AudiobookDownloader.Service;
 using System;
 using System.Collections.Generic;
@@ -16,12 +17,12 @@ namespace AudiobookDownloader
 		private readonly OwnRadioClient _client = new OwnRadioClient();
 		private const string _filename = "tmp.zip";
 
-		private readonly Context _db;
+		private readonly IAudiobookRepository _db;
 
 		public Grabber(IAudiobookService service)
 		{
 			_service = service;
-			_db = new Context();
+			_db = new SqLiteAudiobookRepository();
 		}
 
 		/// <summary>
@@ -43,24 +44,14 @@ namespace AudiobookDownloader
 		/// <returns></returns>
 		private async Task Download(Audiobook audiobook)
 		{
-			Audiobook dbAudiobook = null;
+			bool isDownload = _db.CheckDownloadAudiobook(audiobook);
 
-			if (_db.DownloadAudiobook.Count() > 0)
-			{
-				dbAudiobook = _db.DownloadAudiobook.Select(m => m.Audiobook).Where(m => 
-					m.Title == audiobook.Title && 
-					m.Url == audiobook.Url
-				).FirstOrDefault();
-			}
-
-			if (dbAudiobook == null)
+			if (!isDownload)
 			{
 				using (var fs = new FileStream(_filename, FileMode.Create, FileAccess.ReadWrite))
 				{
 					await _service.GetAudiobook(audiobook, fs);
-
-					_db.DownloadAudiobook.Add(new DownloadAudiobook { Audiobook = audiobook });
-					await _db.SaveChangesAsync();
+					await _db.SaveDownloadAudiobook(audiobook);
 				}
 			}
 		}
@@ -74,29 +65,13 @@ namespace AudiobookDownloader
 		/// <returns></returns>
 		private async Task Upload(Audiobook audiobook)
 		{
+			bool isUpload = _db.CheckUploadAudiobook(audiobook);
+
 			// Если книга полностью отдана на Rdev, выходим из метода
-			if (_db.UploadAudiobook.Count() > 0)
-			{
-				var dbAudiobook = _db.UploadAudiobook
-					.Select(m => m.Audiobook)
-					.Where(m => 
-						m.Title == audiobook.Title && 
-						m.Url == audiobook.Url
-					).FirstOrDefault();
+			if (isUpload)
+				return;
 
-				if (dbAudiobook != null)
-					return;
-			}
-
-			Audiofile uploadFile = null;
-			Guid ownerRecId;
-
-			// Если в таблице, отданных на Rdev файлов, имеется хотя бы одна запись о файлах из данной книги, то Ownerrecid получаем из этой записи,
-			// иначе генерируем новый
-			if (_db.UploadAudiofile.Count() > 0)
-				uploadFile = _db.UploadAudiofile.Select(m => m.File).Where(m => m.AudiobookUrl == audiobook.Url).FirstOrDefault();
-
-			ownerRecId = (uploadFile != null) ? Guid.Parse(uploadFile.OwnerRecid) : Guid.NewGuid();
+			Guid ownerRecId = _db.GetOwnerRecid(audiobook);
 
 			using (var zip = ZipFile.OpenRead(_filename))
 			{
@@ -120,29 +95,21 @@ namespace AudiobookDownloader
 
 							// Проверям был ли отдан файл с таким названием и главой на Rdev, если да, переходим к следующей итерации цикла,
 							// иначе отдаем файл
-							var dbFile = _db.UploadAudiofile
-								.Select(m => m.File)
-								.Where(m => 
-									m.Name == entry.Name && 
-									m.Chapter == chapter &&
-									m.OwnerRecid == ownerRecId.ToString()
-								).FirstOrDefault();
+							bool isUploadFile = _db.CheckUploadAudiofile(file);
 
-							if (dbFile != null)
+							if (isUploadFile)
 								continue;
 
 							await _client.Upload(file, fs, recId);
 
 							// Добавляем файл в таблицу отданных файлов
-							_db.UploadAudiofile.Add(new UploadAudiofile { File = file });
-							await _db.SaveChangesAsync();
+							await _db.SaveUploadAudiofile(file);
 						}
 					}
 				}
 
 				// Добавляем запись о полностью отданной на Rdev книге
-				_db.UploadAudiobook.Add(new UploadAudiobook { Audiobook = audiobook });
-				await _db.SaveChangesAsync();
+				await _db.SaveUploadAudiobook(audiobook);
 			}
 		}
 	}

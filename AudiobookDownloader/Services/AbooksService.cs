@@ -36,7 +36,7 @@ namespace AudiobookDownloader.Service
 
 		public async Task<List<Audiobook>> GetAudiobooks(Category category, int page)
 		{
-			string html = await GetHtml(category.Url);
+			string html = await GetHtml($"{category.Url}/page/{page}");
 			var result = _parser.Parse(html);
 			var audiobooks = result.GetElementsByClassName("post-desc");
 

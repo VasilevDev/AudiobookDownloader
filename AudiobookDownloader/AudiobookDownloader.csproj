@@ -151,6 +151,8 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DatabaseContext\Context.cs" />
+    <Compile Include="Repository\IAudiobookRepository.cs" />
+    <Compile Include="Repository\SqLiteAudiobookRepository.cs" />
     <Compile Include="Services\AbooksService.cs" />
     <Compile Include="Services\IAudiobookService.cs" />
     <Compile Include="Services\KnigogolikService.cs" />
