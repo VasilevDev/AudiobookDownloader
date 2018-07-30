@@ -31,7 +31,7 @@ namespace AudiobookDownloader
 		{
 			try
 			{
-				var novelty = new Category { Name = "Новинки", Url = "https://aobooks.zone/" };
+				var novelty = new Category { Name = "Новинки", Url = ConfigurationManager.AppSettings["BaseServer"] };
 				int countPage = await _service.GetPagesCount(novelty);
 
 				label.Text = $"Запущена загрузка аудиокнги с сайта {novelty.Url}, количество страниц {countPage}.";
@@ -63,7 +63,7 @@ namespace AudiobookDownloader
 		{
 			try
 			{
-				var novelty = new Category { Name = "Новинки", Url = "https://aobooks.zone" };
+				var novelty = new Category { Name = "Новинки", Url = ConfigurationManager.AppSettings["BaseServer"] };
 
 				int countPage = await _service.GetPagesCount(novelty);
 				var client = new OwnRadioClient();
@@ -85,7 +85,7 @@ namespace AudiobookDownloader
 						var result = await client.StartDownload(
 							audiobook.Title, 
 							audiobook.Url, 
-							$"https://aobooks.zone/download/{audiobookId}"
+							$"{ConfigurationManager.AppSettings["BaseServer"]}/download/{audiobookId}"
 						);
 
 						if(result == System.Net.HttpStatusCode.BadRequest || result == System.Net.HttpStatusCode.NotFound)
@@ -236,6 +236,39 @@ namespace AudiobookDownloader
 
 					label.Text = $"Количество загруженных книг{++counter}";
 				}
+			}
+		}
+
+		private async void button1_ClickAsync(object sender, EventArgs e)
+		{
+			try
+			{
+				var novelty = new Category { Name = "Новинки", Url = ConfigurationManager.AppSettings["BaseServer"]
+			};
+				int countPage = await _service.GetPagesCount(novelty);
+
+				label.Text = $"Запущена загрузка аудиокнги с сайта {novelty.Url}, количество страниц {countPage}.";
+
+				for (int page = countPage; page >= 1; page--)
+				{
+					var audiobooks = await _service.GetAudiobooks(novelty, page);
+
+					log.Items.Add($"Страница {page}, количество книг на странице {audiobooks.Count}.");
+
+					foreach (var audiobook in audiobooks)
+					{
+						await _grabber.GrabLocal(audiobook);
+						log.Items.Add($"Книга {audiobook.Title} загружена.");
+					}
+				}
+			}
+			catch (HttpRequestException ex)
+			{
+				log.Items.Add($"Необработанная ошибка: {ex.InnerException.Message}");
+			}
+			catch (Exception ex)
+			{
+				log.Items.Add($"Необработанная ошибка: {ex.Message}");
 			}
 		}
 	}

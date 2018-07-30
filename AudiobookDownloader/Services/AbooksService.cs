@@ -5,11 +5,23 @@ using System.IO;
 using System.Threading.Tasks;
 using AngleSharp.Parser.Html;
 using System.Net;
+using System.Configuration;
 
 namespace AudiobookDownloader.Service
 {
+	struct ProxySettings
+	{
+		public string Ip { get; set; }
+		public int Port { get; set; }
+	}
+
 	internal class AbooksService : IAudiobookService
 	{
+		private ProxySettings proxy = new ProxySettings {
+			Ip = ConfigurationManager.AppSettings["ProxyIp"],
+			Port = Int32.Parse(ConfigurationManager.AppSettings["ProxyPort"])
+		};
+
 		private const string _baseUrl = @"https://aobooks.zone/audiobooks";
 		private readonly HtmlParser _parser = new HtmlParser();
 
@@ -59,7 +71,7 @@ namespace AudiobookDownloader.Service
 			int id = await GetAudiobookId(audiobook);
 
 			HttpWebRequest request = (HttpWebRequest) WebRequest.Create($"https://aobooks.zone/download/{id}");
-			request.Proxy = new WebProxy("101.108.255.99", 8080);
+			request.Proxy = new WebProxy(proxy.Ip, proxy.Port);
 
 			HttpWebResponse response = (HttpWebResponse)request.GetResponse();
 			Stream responseStream = response.GetResponseStream();
@@ -103,7 +115,7 @@ namespace AudiobookDownloader.Service
 		private async Task<string> GetHtml(string url)
 		{
 			HttpWebRequest request = WebRequest.Create(url) as HttpWebRequest;
-			request.Proxy = new WebProxy("101.108.255.99", 8080);
+			request.Proxy = new WebProxy(proxy.Ip, proxy.Port);
 
 			HttpWebResponse response = await request.GetResponseAsync() as HttpWebResponse;
 			var stream = response.GetResponseStream();

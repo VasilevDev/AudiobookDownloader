@@ -36,19 +36,24 @@ namespace AudiobookDownloader
 				await Upload(audiobook);
 		}
 
+		public async Task GrabLocal(Audiobook audiobook)
+		{
+			await Download(audiobook, string.Concat(Guid.NewGuid().ToString(), audiobook.Title));
+		}
+
 		/// <summary>
 		/// Метод загружает аудиокнигу с сайта, в случае успешного скачивания книги,
 		/// сохраняет запись в таблицу DownloadAudiobook
 		/// </summary>
 		/// <param name="audiobook">Аудиокнига, которую необходимо загрузить</param>
 		/// <returns></returns>
-		private async Task Download(Audiobook audiobook)
+		private async Task Download(Audiobook audiobook, string filename = _filename)
 		{
 			bool isDownload = _db.CheckDownloadAudiobook(audiobook);
 
 			if (!isDownload)
 			{
-				using (var fs = new FileStream(_filename, FileMode.Create, FileAccess.ReadWrite))
+				using (var fs = new FileStream(filename, FileMode.Create, FileAccess.ReadWrite))
 				{
 					await _service.GetAudiobook(audiobook, fs);
 					await _db.SaveDownloadAudiobook(audiobook);
