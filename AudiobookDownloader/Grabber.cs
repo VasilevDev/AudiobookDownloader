@@ -3,6 +3,7 @@ using AudiobookDownloader.Repository;
 using AudiobookDownloader.Service;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -16,11 +17,15 @@ namespace AudiobookDownloader
 		private readonly IAudiobookService _service;
 		private readonly OwnRadioClient _client = new OwnRadioClient();
 		private const string _filename = "tmp.zip";
+		private readonly string dirPath = ConfigurationManager.AppSettings["Audiobooks"];
 
 		private readonly IAudiobookRepository _db;
 
 		public Grabber(IAudiobookService service)
 		{
+			if (!Directory.Exists(dirPath))
+				Directory.CreateDirectory(dirPath);
+
 			_service = service;
 			_db = new SqLiteAudiobookRepository();
 		}
@@ -32,13 +37,13 @@ namespace AudiobookDownloader
 		/// <returns></returns>
 		public async Task Grab(Audiobook audiobook)
 		{
-				await Download(audiobook);
-				await Upload(audiobook);
+			await Download(audiobook);
+			await Upload(audiobook);
 		}
 
 		public async Task GrabLocal(Audiobook audiobook)
 		{
-			await Download(audiobook, string.Concat(Guid.NewGuid().ToString(), audiobook.Title));
+			await Download(audiobook, $"{audiobook.Title}.zip");
 		}
 
 		/// <summary>
@@ -53,7 +58,7 @@ namespace AudiobookDownloader
 
 			if (!isDownload)
 			{
-				using (var fs = new FileStream(filename, FileMode.Create, FileAccess.ReadWrite))
+				using (var fs = new FileStream($"{dirPath}/{filename}", FileMode.Create, FileAccess.ReadWrite))
 				{
 					await _service.GetAudiobook(audiobook, fs);
 					await _db.SaveDownloadAudiobook(audiobook);
