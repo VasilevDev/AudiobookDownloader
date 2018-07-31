@@ -243,8 +243,7 @@ namespace AudiobookDownloader
 		{
 			try
 			{
-				var novelty = new Category { Name = "Новинки", Url = ConfigurationManager.AppSettings["BaseServer"]
-			};
+				var novelty = new Category { Name = "Новинки", Url = ConfigurationManager.AppSettings["BaseServer"]};
 				int countPage = await _service.GetPagesCount(novelty);
 
 				label.Text = $"Запущена загрузка аудиокнги с сайта {novelty.Url}, количество страниц {countPage}.";
