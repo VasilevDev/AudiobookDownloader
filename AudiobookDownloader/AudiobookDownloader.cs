@@ -129,13 +129,13 @@ namespace AudiobookDownloader
 					var memStream = new MemoryStream();
 					await txtName.Open().CopyToAsync(memStream);
 
-					byte[] bytes = new byte[(int)memStream.Length];
+					//byte[] bytes = new byte[(int)memStream.Length];
 
-					memStream.Position = 0;
-					await memStream.ReadAsync(bytes, 0, (int)memStream.Length);
+					//memStream.Position = 0;
+					//await memStream.ReadAsync(bytes, 0, (int)memStream.Length);
 
 					// Получаем содержимое файла
-					string txtContnent = Encoding.ASCII.GetString(bytes);
+					string txtContnent = Encoding.ASCII.GetString(memStream.ToArray());
 
 					var audiobook = new Audiobook
 					{
