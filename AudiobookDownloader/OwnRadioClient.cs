@@ -1,5 +1,7 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
 using System.Net;
@@ -29,7 +31,6 @@ namespace AudiobookDownloader
 		/// <returns></returns>
 		public async Task<HttpStatusCode> Upload(Audiofile file, Stream stream, Guid recid)
 		{
-			JObject request = new JObject();
 			byte[] bytes = null;
 
 			using (var memoryStream = new MemoryStream())
@@ -41,22 +42,30 @@ namespace AudiobookDownloader
 			if (file.Chapter == 1)
 				recid = Guid.Parse(file.OwnerRecid);
 
-			// Формируем json содержимое для запроса с передачей аудиофайла на Rdev
-			request.Add("method", "uploadaudiofile");
-			request.Add("fields", new JObject() {
-					{"recid", recid.ToString()},
-					{"deviceid", "7fce47ab-4fa2-4b81-aa06-d49223442d07"},
-					{"recdescription", file.AudiobookName},
-					{"mediatype", "audiobook"},
-					{"chapter", file.Chapter.ToString()},
-					{"recname", $"{recid.ToString()}.mp3"},
-					{"ownerrecid", file.OwnerRecid},
-					{"url", file.AudiobookUrl},
-					{"content", Convert.ToBase64String(bytes)}
-				}
-			);
+			var request = new UploadFileDto() {
+				Method = "uploadaudiofile"
+			};
 
-			var content = new StringContent(request.ToString(), Encoding.UTF8, "application/json");
+			var files = new List<FileDescription>()
+			{
+				new FileDescription()
+				{
+					RecId = recid,
+					DeviceId = Guid.Parse("7fce47ab-4fa2-4b81-aa06-d49223442d07"),
+					Recdescription = file.AudiobookName,
+					Mediatype = "audiobook",
+					Chapter = file.Chapter,
+					Name = $"{recid.ToString()}.mp3",
+					Ownerrecid = Guid.Parse(file.OwnerRecid),
+					Urn = file.AudiobookUrl,
+					Content = Convert.ToBase64String(bytes)
+				}
+			};
+
+			request.Fields = new FilesItemDto() { Files = files };
+
+			string json = JsonConvert.SerializeObject(request);
+			var content = new StringContent(json.ToLower(), Encoding.UTF8, "application/json");
 
 			using (var response = await _client.PostAsync(_connection, content).ConfigureAwait(false))
 			{

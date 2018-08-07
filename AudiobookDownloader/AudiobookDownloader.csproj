@@ -156,6 +156,7 @@
     <Compile Include="Services\AbooksService.cs" />
     <Compile Include="Services\IAudiobookService.cs" />
     <Compile Include="Services\KnigogolikService.cs" />
+    <Compile Include="UploadFileDto.cs" />
     <EmbeddedResource Include="AudiobookDownloader.resx">
       <DependentUpon>AudiobookDownloader.cs</DependentUpon>
     </EmbeddedResource>
