@@ -7,8 +7,8 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Data.Entity;
 
 namespace AudiobookDownloader
 {
@@ -17,6 +17,7 @@ namespace AudiobookDownloader
 		private readonly IAudiobookService _service;
 		private readonly Grabber _grabber;
 		private readonly Context _db;
+		private readonly Category novelty = new Category { Name = "Новинки", Url = ConfigurationManager.AppSettings["BaseServer"] };
 
 		public AudiobookDownloader()
 		{
@@ -29,42 +30,13 @@ namespace AudiobookDownloader
 
 		private async void AbooksBtn_Click(object sender, EventArgs e)
 		{
-			try
-			{
-				var novelty = new Category { Name = "Новинки", Url = ConfigurationManager.AppSettings["BaseServer"] };
-				int countPage = await _service.GetPagesCount(novelty);
-
-				label.Text = $"Запущена загрузка аудиокнги с сайта {novelty.Url}, количество страниц {countPage}.";
-
-				for (int page = countPage; page >= 1; page--)
-				{
-					var audiobooks = await _service.GetAudiobooks(novelty, page);
-
-					log.Items.Add($"Страница {page}, количество книг на странице {audiobooks.Count}.");
-
-					foreach (var audiobook in audiobooks)
-					{
-						await _grabber.Grab(audiobook);
-						log.Items.Add($"Книга {audiobook.Title} загружена.");
-					}
-				}
-			}
-			catch(HttpRequestException ex)
-			{
-				log.Items.Add($"Необработанная ошибка: {ex.InnerException.Message}");
-			}
-			catch (Exception ex)
-			{
-				log.Items.Add($"Необработанная ошибка: {ex.Message}");
-			}
+			await RunDownload(isLocal: false);
 		}
 
 		private async void rdevLoad_ClickAsync(object sender, EventArgs e)
 		{
 			try
 			{
-				var novelty = new Category { Name = "Новинки", Url = ConfigurationManager.AppSettings["BaseServer"] };
-
 				int countPage = await _service.GetPagesCount(novelty);
 				var client = new OwnRadioClient();
 
@@ -90,8 +62,8 @@ namespace AudiobookDownloader
 
 						if(result == System.Net.HttpStatusCode.BadRequest || result == System.Net.HttpStatusCode.NotFound)
 							log.Items.Add($"При попытке запустить скачивание {audiobook.Title} возникла ошибка.");
-
-						log.Items.Add($"Книга {audiobook.Title} загружена.");
+						else
+							log.Items.Add($"Книга {audiobook.Title} загружена.");
 					}
 				}
 			}
@@ -241,9 +213,13 @@ namespace AudiobookDownloader
 
 		private async void button1_ClickAsync(object sender, EventArgs e)
 		{
+			await RunDownload(isLocal: true);
+		}
+
+		private async Task RunDownload(bool isLocal = false)
+		{
 			try
 			{
-				var novelty = new Category { Name = "Новинки", Url = ConfigurationManager.AppSettings["BaseServer"]};
 				int countPage = await _service.GetPagesCount(novelty);
 
 				label.Text = $"Запущена загрузка аудиокнги с сайта {novelty.Url}, количество страниц {countPage}.";
@@ -256,7 +232,11 @@ namespace AudiobookDownloader
 
 					foreach (var audiobook in audiobooks)
 					{
-						await _grabber.GrabLocal(audiobook);
+						log.Items.Add($"Загружаем аудиокнигу: {audiobook.Title}.");
+
+						if (isLocal) { await _grabber.GrabLocal(audiobook); }
+						else { await _grabber.Grab(audiobook); }
+
 						log.Items.Add($"Книга {audiobook.Title} загружена.");
 					}
 				}

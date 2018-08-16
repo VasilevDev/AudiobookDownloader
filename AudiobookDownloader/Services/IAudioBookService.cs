@@ -35,6 +35,11 @@ namespace AudiobookDownloader.Service
 		/// <returns></returns>
 		Task<int> GetPagesCount(Category category);
 
+		/// <summary>
+		/// Метод получения идентификатора аудиокниги
+		/// </summary>
+		/// <param name="audiobook"></param>
+		/// <returns></returns>
 		Task<int> GetAudiobookId(Audiobook audiobook);
 	}
 }
