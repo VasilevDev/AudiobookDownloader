@@ -55,10 +55,11 @@ namespace AudiobookDownloader
 					Recdescription = file.AudiobookName,
 					Mediatype = "audiobook",
 					Chapter = file.Chapter,
-					Name = $"{recid.ToString()}.mp3",
 					Ownerrecid = Guid.Parse(file.OwnerRecid),
 					Urn = file.AudiobookUrl,
-					Content = Convert.ToBase64String(bytes)
+					Name = $"{recid.ToString()}.mp3",		// Описывает непосредственно файл
+					Content = Convert.ToBase64String(bytes),// Описывает непосредственно файл
+					Size = bytes.Length / 1024
 				}
 			};
 

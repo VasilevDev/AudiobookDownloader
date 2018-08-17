@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Text;
 using System.Windows.Forms;
 using System.Data.Entity;
+using AudiobookDownloader.Repository;
 
 namespace AudiobookDownloader
 {
@@ -16,7 +17,8 @@ namespace AudiobookDownloader
 	{
 		private readonly IAudiobookService _service;
 		private readonly Grabber _grabber;
-		private readonly Context _db;
+		//private readonly Context _db;
+		private readonly IAudiobookRepository _db;
 
 		public AudiobookDownloader()
 		{
@@ -24,7 +26,8 @@ namespace AudiobookDownloader
 
 			_service = new AbooksService();
 			_grabber = new Grabber(_service);
-			_db = new Context();
+			//_db = new Context();
+			_db = new SqLiteAudiobookRepository();
 		}
 
 		private async void AbooksBtn_Click(object sender, EventArgs e)
@@ -103,139 +106,118 @@ namespace AudiobookDownloader
 
 		private async void dirUpload_Click(object sender, EventArgs e)
 		{
-			OwnRadioClient client = new OwnRadioClient();
-			var path = ConfigurationManager.AppSettings["Audiobooks"];
-			int counter = 0;
-
-			if (!Directory.Exists(path))
+			try
 			{
-				log.Items.Add("Директория с аудиокнигами не существует!");
-				return;
-			}
+				OwnRadioClient client = new OwnRadioClient();
+				var path = ConfigurationManager.AppSettings["Audiobooks"];
+				int counter = 0;
+				bool error = false;
 
-			var files = Directory.GetFiles(path);
-
-			foreach (var file in files)
-			{
-				using (var zip = ZipFile.Open(file, ZipArchiveMode.Read, Encoding.GetEncoding(866)))
+				if (!Directory.Exists(path))
 				{
-					//Получаем список файлов
-					var zipContent = zip.Entries;
+					log.Items.Add("Директория с аудиокнигами не существует!");
+					return;
+				}
 
-					// Ищем txt файл со ссылкой на аудиокнигу
-					var txtName = zipContent.FirstOrDefault(x => Path.GetExtension(x.Name.Replace('<', ' ').Replace('>', ' ')) == ".txt");
+				var files = Directory.GetFiles(path);
 
-					// Копируем содержимое файла в memory stream
-					var memStream = new MemoryStream();
-					await txtName.Open().CopyToAsync(memStream);
-
-					//byte[] bytes = new byte[(int)memStream.Length];
-
-					//memStream.Position = 0;
-					//await memStream.ReadAsync(bytes, 0, (int)memStream.Length);
-
-					// Получаем содержимое файла
-					string txtContnent = Encoding.ASCII.GetString(memStream.ToArray());
-
-					var audiobook = new Audiobook
+				foreach (var file in files)
+				{
+					using (var zip = ZipFile.Open(file, ZipArchiveMode.Read, Encoding.GetEncoding(866)))
 					{
-						Title = Path.GetFileNameWithoutExtension(txtName.Name.Replace('<', ' ').Replace('>', ' ')),
-						Url = txtContnent
-					};
+						error = false;
 
-					log.Items.Add($"Попытка загрузки аудиокниги {audiobook.Title}, URL:{audiobook.Url}");
+						//Получаем список файлов
+						var zipContent = zip.Entries;
 
-					// Получаем все mp3 файлы
-					var mp3Content = zipContent.Where(x => Path.GetExtension(x.Name.Replace('<', ' ').Replace('>', ' ')) == ".mp3").ToList();
-					int chapter = 0;
+						// Ищем txt файл со ссылкой на аудиокнигу
+						var txtName = zipContent.FirstOrDefault(x => Path.GetExtension(x.Name.Replace('<', ' ').Replace('>', ' ')) == ".txt");
 
-					log.Items.Add($"Количество аудиофайлов: {mp3Content.Count}");
-					log.Items.Add($"Проверяем была ли аудиокнига: {audiobook.Title} загружена ранее");
+						// Копируем содержимое файла в memory stream
+						var memStream = new MemoryStream();
+						await txtName.Open().CopyToAsync(memStream);
 
-					// Если книга полностью отдана на Rdev, выходим из метода
-					if (_db.UploadAudiobook.Count() > 0)
-					{
-						var dbAudiobook = _db.UploadAudiobook
-							.Select(m => m.Audiobook)
-							.Where(m =>
-								m.Title == audiobook.Title &&
-								m.Url == audiobook.Url
-							).FirstOrDefault();
+						// Получаем содержимое файла
+						string txtContnent = Encoding.ASCII.GetString(memStream.ToArray());
 
-						if (dbAudiobook != null)
+						var audiobook = new Audiobook
 						{
-							label.Text = $"Количество загруженных книг{++counter}";
+							Title = Path.GetFileNameWithoutExtension(txtName.Name.Replace('<', ' ').Replace('>', ' ')),
+							Url = txtContnent
+						};
+
+						await _db.SaveDownloadAudiobook(audiobook);
+						log.Items.Add($"Попытка загрузки аудиокниги {audiobook.Title}, URL:{audiobook.Url}");
+
+						// Получаем все mp3 файлы
+						var mp3Content = zipContent.Where(x => Path.GetExtension(x.Name.Replace('<', ' ').Replace('>', ' ')) == ".mp3").ToList();
+						int chapter = 0;
+
+						log.Items.Add($"Количество аудиофайлов: {mp3Content.Count}");
+						log.Items.Add($"Проверяем была ли аудиокнига: {audiobook.Title} загружена ранее");
+
+						// Если книга полностью отдана на Rdev, идем к следующей
+						if (_db.CheckUploadAudiobook(audiobook))
+						{
+							label.Text = $"Количество загруженных книг {++counter}";
 							continue;
 						}
-					}
 
-					Audiofile uploadFile = null;
-					Guid ownerRecId;
+						log.Items.Add($"Получаем ownerrecid для файла аудиокниги: {audiobook.Title}");
+						Guid ownerRecId = _db.GetOwnerRecid(audiobook);
 
-					log.Items.Add($"Получаем ownerrecid для файла аудиокниги: {audiobook.Title}");
-
-					// Если в таблице, отданных на Rdev файлов, имеется хотя бы одна запись о файлах из данной книги, то Ownerrecid получаем из этой записи,
-					// иначе генерируем новый
-					if (_db.UploadAudiofile.Count() > 0)
-						uploadFile = _db.UploadAudiofile.Select(m => m.File).Where(m => m.AudiobookUrl == audiobook.Url).FirstOrDefault();
-
-					ownerRecId = (uploadFile != null) ? Guid.Parse(uploadFile.OwnerRecid) : Guid.NewGuid();
-
-					log.Items.Add($"Запускаем upload аудиофайлов книги: {audiobook.Title}");
-
-					foreach (var entry in mp3Content)
-					{
-						using (var fs = entry.Open())
+						log.Items.Add($"Запускаем upload аудиофайлов книги: {audiobook.Title}");
+						foreach (var entry in mp3Content)
 						{
-							Guid recId = Guid.NewGuid();
-
-							var sendedFile = new Audiofile()
+							using (var fs = entry.Open())
 							{
-								Name = entry.Name,
-								Chapter = ++chapter,
-								OwnerRecid = ownerRecId.ToString(),
-								AudiobookName = audiobook.Title,
-								AudiobookUrl = audiobook.Url
-							};
+								Guid recId = Guid.NewGuid();
 
-							log.Items.Add($"Проверяем отправлялся ли файл {sendedFile.Name} ранее");
+								var sendedFile = new Audiofile()
+								{
+									Name = entry.Name,
+									Chapter = ++chapter,
+									OwnerRecid = ownerRecId.ToString(),
+									AudiobookName = audiobook.Title,
+									AudiobookUrl = audiobook.Url
+								};
 
-							// Проверям был ли отдан файл с таким названием и главой на Rdev, если да, переходим к следующей итерации цикла,
-							// иначе отдаем файл
-							var dbFile = _db.UploadAudiofile
-								.Select(m => m.File)
-								.Where(m =>
-									m.Name == entry.Name &&
-									m.Chapter == chapter &&
-									m.OwnerRecid == ownerRecId.ToString()
-								).FirstOrDefault();
+								log.Items.Add($"Проверяем отправлялся ли файл {sendedFile.Name} ранее");
 
-							if (dbFile != null)
-							{
-								log.Items.Add($"Файл {sendedFile.Name} уже отправлялся, переходим к следующему");
-								continue;
+								// Проверям был ли отдан файл с таким названием и главой на Rdev, если да, переходим к следующей итерации цикла,
+								// иначе отдаем файл
+								if (_db.CheckUploadAudiofile(sendedFile))
+								{
+									log.Items.Add($"Файл {sendedFile.Name} уже отправлялся, переходим к следующему");
+									continue;
+								}
+
+								log.Items.Add($"Отправляем аудиофайл: {sendedFile.Name}");
+								var status = await client.Upload(sendedFile, fs, recId);
+
+								log.Items.Add($"Сохраняем информацию о переданном файле {sendedFile.Name}");
+
+								// Добавляем файл в таблицу отданных файлов
+								if (status == System.Net.HttpStatusCode.OK)
+									await _db.SaveUploadAudiofile(sendedFile);
+								else
+									error = true;
 							}
-
-							log.Items.Add($"Отправляем аудиофайл: {sendedFile.Name}");
-
-							await client.Upload(sendedFile, fs, recId);
-
-							log.Items.Add($"Сохраняем информацию о переданном файле {sendedFile.Name}");
-
-							// Добавляем файл в таблицу отданных файлов
-							_db.UploadAudiofile.Add(new UploadAudiofile { File = sendedFile });
-							await _db.SaveChangesAsync();
 						}
+
+						log.Items.Add($"Все файлы аудиокниги {audiobook.Title} были переданны, сохраняем аудиокнигу в историю загрузок.");
+
+						// Добавляем запись о полностью отданной на Rdev книге
+						if (!error)
+							await _db.SaveUploadAudiobook(audiobook);
+
+						label.Text = $"Количество загруженных книг{++counter}";
 					}
-
-					log.Items.Add($"Все файлы аудиокниги {audiobook.Title} были переданны, сохраняем аудиокнигу в историю загрузок.");
-
-					// Добавляем запись о полностью отданной на Rdev книге
-					_db.UploadAudiobook.Add(new UploadAudiobook { Audiobook = audiobook });
-					await _db.SaveChangesAsync();
-
-					label.Text = $"Количество загруженных книг{++counter}";
 				}
+			}
+			catch(Exception ex)
+			{
+				label.Text = $"[ОШИБКА]: {ex.Message}";
 			}
 		}
 

@@ -17,6 +17,7 @@ namespace AudiobookDownloader
 		public Guid Ownerrecid { get; set; }
 		public string Urn { get; set; }
 		public string Content { get; set; }
+		public int Size { get; set; }
 	}
 
 	public struct FilesItemDto

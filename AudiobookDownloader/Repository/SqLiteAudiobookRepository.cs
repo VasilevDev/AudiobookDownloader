@@ -1,8 +1,6 @@
 ﻿using AudiobookDownloader.DatabaseContext;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace AudiobookDownloader.Repository
@@ -52,7 +50,7 @@ namespace AudiobookDownloader.Repository
 		{
 			using (var context = new Context())
 			{
-				if (context.UploadAudiobook.Count() > 0)
+				if (context.UploadAudiofile.Count() > 0)
 				{
 					var dbItem = context.UploadAudiofile
 					.Select(m => m.File)
@@ -90,24 +88,33 @@ namespace AudiobookDownloader.Repository
 		{
 			var context = new Context();
 
-			context.DownloadAudiobook.Add(new DownloadAudiobook { Audiobook = audiobook });
-			await context.SaveChangesAsync();
+			if (!CheckDownloadAudiobook(audiobook))
+			{
+				context.DownloadAudiobook.Add(new DownloadAudiobook { Audiobook = audiobook });
+				await context.SaveChangesAsync();
+			}
 		}
 
 		public async Task SaveUploadAudiobook(Audiobook audiobook)
 		{
 			var context = new Context();
 
-			context.UploadAudiobook.Add(new UploadAudiobook { Audiobook = audiobook });
-			await context.SaveChangesAsync();
+			if (!CheckUploadAudiobook(audiobook))
+			{
+				context.UploadAudiobook.Add(new UploadAudiobook { Audiobook = audiobook });
+				await context.SaveChangesAsync();
+			}
 		}
 
 		public async Task SaveUploadAudiofile(Audiofile audiofile)
 		{
 			var context = new Context();
 
-			context.UploadAudiofile.Add(new UploadAudiofile { File = audiofile });
-			await context.SaveChangesAsync();
+			if (!CheckUploadAudiofile(audiofile))
+			{
+				context.UploadAudiofile.Add(new UploadAudiofile { File = audiofile });
+				await context.SaveChangesAsync();
+			}
 		}
 	}
 }
