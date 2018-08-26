@@ -121,6 +121,8 @@ namespace AudiobookDownloader
 
 				var files = Directory.GetFiles(path);
 
+				label.Text = "Запущена загрузка аудиокниг из локальной директории";
+
 				foreach (var file in files)
 				{
 					using (var zip = ZipFile.Open(file, ZipArchiveMode.Read, Encoding.GetEncoding(866)))

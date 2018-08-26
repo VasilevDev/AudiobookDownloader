@@ -15,7 +15,7 @@ namespace AudiobookDownloader
 		public int Chapter { get; set; }
 		public string Name { get; set; }
 		public Guid Ownerrecid { get; set; }
-		public string Urn { get; set; }
+		public string LocalDevicePathUpload { get; set; }
 		public string Content { get; set; }
 		public int Size { get; set; }
 	}

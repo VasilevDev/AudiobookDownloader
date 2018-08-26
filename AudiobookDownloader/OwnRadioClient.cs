@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -18,8 +19,10 @@ namespace AudiobookDownloader
 
 		public OwnRadioClient()
 		{
-			_client = new HttpClient();
-			_client.Timeout = TimeSpan.FromMinutes(10);
+			_client = new HttpClient
+			{
+				Timeout = TimeSpan.FromMinutes(30)
+			};
 		}
 
 		/// <summary>
@@ -56,7 +59,7 @@ namespace AudiobookDownloader
 					Mediatype = "audiobook",
 					Chapter = file.Chapter,
 					Ownerrecid = Guid.Parse(file.OwnerRecid),
-					Urn = file.AudiobookUrl,
+					LocalDevicePathUpload = file.AudiobookUrl,
 					Name = $"{recid.ToString()}.mp3",		// Описывает непосредственно файл
 					Content = Convert.ToBase64String(bytes),// Описывает непосредственно файл
 					Size = bytes.Length / 1024
@@ -66,10 +69,11 @@ namespace AudiobookDownloader
 			request.Fields = new FilesItemDto() { Files = files };
 
 			string json = JsonConvert.SerializeObject(request);
-			var content = new StringContent(json.ToLower(), Encoding.UTF8, "application/json");
+			var content = new StringContent(json, Encoding.UTF8, "application/json");
 
 			using (var response = await _client.PostAsync(_connection, content).ConfigureAwait(false))
 			{
+				var res = response.Content.ReadAsStringAsync();
 				return response.StatusCode;
 			}
 		}
