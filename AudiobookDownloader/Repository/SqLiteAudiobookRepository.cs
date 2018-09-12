@@ -7,7 +7,7 @@ namespace AudiobookDownloader.Repository
 {
 	class SqLiteAudiobookRepository : IAudiobookRepository
 	{
-		public bool CheckDownloadAudiobook(Audiobook audiobook)
+		public bool IsDownloadAudiobook(Audiobook audiobook)
 		{
 			using (var context = new Context())
 			{
@@ -18,15 +18,14 @@ namespace AudiobookDownloader.Repository
 						m.Url == audiobook.Url
 					).FirstOrDefault();
 
-					if (dbItem != null)
-						return true;
+					return (dbItem != null);
 				}
 
 				return false;
 			}
 		}
 
-		public bool CheckUploadAudiobook(Audiobook audiobook)
+		public bool IsUploadAudiobook(Audiobook audiobook)
 		{
 			using (var context = new Context())
 			{
@@ -38,15 +37,14 @@ namespace AudiobookDownloader.Repository
 							m.Url == audiobook.Url
 						).FirstOrDefault();
 
-					if (dbItem != null)
-						return true;
+					return (dbItem != null);
 				}
 
 				return false;
 			}
 		}
 
-		public bool CheckUploadAudiofile(Audiofile audiofile)
+		public bool IsUploadAudiofile(Audiofile audiofile)
 		{
 			using (var context = new Context())
 			{
@@ -60,8 +58,7 @@ namespace AudiobookDownloader.Repository
 						m.OwnerRecid == audiofile.OwnerRecid
 					).FirstOrDefault();
 
-					if (dbItem != null)
-						return true;
+					return (dbItem != null);
 				}
 
 				return false;
@@ -88,7 +85,7 @@ namespace AudiobookDownloader.Repository
 		{
 			var context = new Context();
 
-			if (!CheckDownloadAudiobook(audiobook))
+			if (!IsDownloadAudiobook(audiobook))
 			{
 				context.DownloadAudiobook.Add(new DownloadAudiobook { Audiobook = audiobook });
 				await context.SaveChangesAsync();
@@ -99,7 +96,7 @@ namespace AudiobookDownloader.Repository
 		{
 			var context = new Context();
 
-			if (!CheckUploadAudiobook(audiobook))
+			if (!IsUploadAudiobook(audiobook))
 			{
 				context.UploadAudiobook.Add(new UploadAudiobook { Audiobook = audiobook });
 				await context.SaveChangesAsync();
@@ -110,7 +107,7 @@ namespace AudiobookDownloader.Repository
 		{
 			var context = new Context();
 
-			if (!CheckUploadAudiofile(audiofile))
+			if (!IsUploadAudiofile(audiofile))
 			{
 				context.UploadAudiofile.Add(new UploadAudiofile { File = audiofile });
 				await context.SaveChangesAsync();

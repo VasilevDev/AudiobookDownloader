@@ -9,9 +9,9 @@ namespace AudiobookDownloader.Repository
 	interface IAudiobookRepository
 	{
 		//DownloadedPage
-		bool CheckDownloadAudiobook(Audiobook audiobook);
-		bool CheckUploadAudiobook(Audiobook audiobook);
-		bool CheckUploadAudiofile(Audiofile audiofile);
+		bool IsDownloadAudiobook(Audiobook audiobook);
+		bool IsUploadAudiobook(Audiobook audiobook);
+		bool IsUploadAudiofile(Audiofile audiofile);
 
 		Task SaveDownloadAudiobook(Audiobook audiobook);
 		Task SaveUploadAudiobook(Audiobook audiobook);

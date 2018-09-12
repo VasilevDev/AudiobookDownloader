@@ -17,8 +17,8 @@ namespace AudiobookDownloader
 	{
 		private readonly IAudiobookService _service;
 		private readonly Grabber _grabber;
-		//private readonly Context _db;
 		private readonly IAudiobookRepository _db;
+		private readonly string url = ConfigurationManager.AppSettings["AbookService"];
 
 		public AudiobookDownloader()
 		{
@@ -26,7 +26,6 @@ namespace AudiobookDownloader
 
 			_service = new AbooksService();
 			_grabber = new Grabber(_service);
-			//_db = new Context();
 			_db = new SqLiteAudiobookRepository();
 		}
 
@@ -34,7 +33,7 @@ namespace AudiobookDownloader
 		{
 			try
 			{
-				var novelty = new Category { Name = "Новинки", Url = ConfigurationManager.AppSettings["BaseServer"] };
+				var novelty = new Category { Name = "Новинки", Url = url };
 				int countPage = await _service.GetPagesCount(novelty);
 
 				label.Text = $"Запущена загрузка аудиокнги с сайта {novelty.Url}, количество страниц {countPage}.";
@@ -66,7 +65,7 @@ namespace AudiobookDownloader
 		{
 			try
 			{
-				var novelty = new Category { Name = "Новинки", Url = ConfigurationManager.AppSettings["BaseServer"] };
+				var novelty = new Category { Name = "Новинки", Url = url };
 
 				int countPage = await _service.GetPagesCount(novelty);
 				var client = new OwnRadioClient();
@@ -88,7 +87,7 @@ namespace AudiobookDownloader
 						var result = await client.StartDownload(
 							audiobook.Title, 
 							audiobook.Url, 
-							$"{ConfigurationManager.AppSettings["BaseServer"]}/download/{audiobookId}"
+							$"{url}/download/{audiobookId}"
 						);
 
 						if(result == System.Net.HttpStatusCode.BadRequest || result == System.Net.HttpStatusCode.NotFound)
@@ -159,7 +158,7 @@ namespace AudiobookDownloader
 						log.Items.Add($"Проверяем была ли аудиокнига: {audiobook.Title} загружена ранее");
 
 						// Если книга полностью отдана на Rdev, идем к следующей
-						if (_db.CheckUploadAudiobook(audiobook))
+						if (_db.IsUploadAudiobook(audiobook))
 						{
 							label.Text = $"Количество загруженных книг {++counter}";
 							continue;
@@ -188,7 +187,7 @@ namespace AudiobookDownloader
 
 								// Проверям был ли отдан файл с таким названием и главой на Rdev, если да, переходим к следующей итерации цикла,
 								// иначе отдаем файл
-								if (_db.CheckUploadAudiofile(sendedFile))
+								if (_db.IsUploadAudiofile(sendedFile))
 								{
 									log.Items.Add($"Файл {sendedFile.Name} уже отправлялся, переходим к следующему");
 									continue;
@@ -227,7 +226,7 @@ namespace AudiobookDownloader
 		{
 			try
 			{
-				var novelty = new Category { Name = "Новинки", Url = ConfigurationManager.AppSettings["BaseServer"]};
+				var novelty = new Category { Name = "Новинки", Url = url };
 				int countPage = await _service.GetPagesCount(novelty);
 
 				label.Text = $"Запущена загрузка аудиокнги с сайта {novelty.Url}, количество страниц {countPage}.";

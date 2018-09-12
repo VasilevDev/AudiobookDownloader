@@ -54,7 +54,7 @@ namespace AudiobookDownloader
 		/// <returns></returns>
 		private async Task Download(Audiobook audiobook, string filename = _filename)
 		{
-			bool isDownload = _db.CheckDownloadAudiobook(audiobook);
+			bool isDownload = _db.IsDownloadAudiobook(audiobook);
 
 			if (!isDownload)
 			{
@@ -75,7 +75,7 @@ namespace AudiobookDownloader
 		/// <returns></returns>
 		private async Task Upload(Audiobook audiobook)
 		{
-			bool isUpload = _db.CheckUploadAudiobook(audiobook);
+			bool isUpload = _db.IsUploadAudiobook(audiobook);
 
 			// Если книга полностью отдана на Rdev, выходим из метода
 			if (isUpload)
@@ -105,7 +105,7 @@ namespace AudiobookDownloader
 
 							// Проверям был ли отдан файл с таким названием и главой на Rdev, если да, переходим к следующей итерации цикла,
 							// иначе отдаем файл
-							bool isUploadFile = _db.CheckUploadAudiofile(file);
+							bool isUploadFile = _db.IsUploadAudiofile(file);
 
 							if (isUploadFile)
 								continue;
