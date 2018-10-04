@@ -135,6 +135,7 @@
   <ItemGroup>
     <Compile Include="Audiobook.cs" />
     <Compile Include="Audiofile.cs" />
+    <Compile Include="Auth\User.cs" />
     <Compile Include="Category.cs" />
     <Compile Include="DatabaseContext\DownloadAudiobook.cs" />
     <Compile Include="DatabaseContext\DownloadedPage.cs" />

@@ -61,7 +61,7 @@ namespace AudiobookDownloader.Service
 			var parseResult = _parser.Parse(html);
 
 			// Получаем коллекцию книг со страницы
-			var audiobooks = parseResult.GetElementsByClassName("post-desc");
+			var audiobooks = parseResult.GetElementsByClassName("card__title");
 
 			var list = new List<Audiobook>();
 
@@ -70,8 +70,8 @@ namespace AudiobookDownloader.Service
 			{
 				list.Add(new Audiobook
 				{
-					Title = audiobook.GetElementsByClassName("entry-title")[0].TextContent,
-					Url = audiobook.GetElementsByClassName("post-more")[0].GetAttribute("href")
+					Title = audiobook.FirstElementChild.TextContent,
+					Url = audiobook.FirstElementChild.GetAttribute("href")
 				});
 			}
 
@@ -131,7 +131,7 @@ namespace AudiobookDownloader.Service
 			var parseResult = _parser.Parse(html);
 
 			// Получаем значение идентификатора указанной книги
-			string uri = parseResult.GetElementsByClassName("button button_js button_green")[0].GetAttribute("href");
+			string uri = parseResult.GetElementsByClassName("button button_js button_orange")[0].GetAttribute("href");
 			Int32.TryParse(HttpUtility.ParseQueryString(new Uri(uri).Query).Get("book_id"), out int id);
 
 			return id;

@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using AudiobookDownloader.Auth;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -7,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,6 +18,8 @@ namespace AudiobookDownloader
 	{
 		private readonly HttpClient _client;
 		private readonly string _connection = ConfigurationManager.ConnectionStrings["RdevServer"].ConnectionString;
+		private readonly string _authLogin = ConfigurationManager.ConnectionStrings["AuthLogin"].ConnectionString;
+		private bool _isAuthCompleted = false;
 
 		public OwnRadioClient()
 		{
@@ -26,13 +30,66 @@ namespace AudiobookDownloader
 		}
 
 		/// <summary>
+		/// Метод авторизации на сервере Rdev
+		/// </summary>
+		/// <returns></returns>
+		public async Task Authorize()
+		{
+			try
+			{
+				// Если уже авторизованы, выходим
+				if (_isAuthCompleted)
+					return;
+
+				// Получаем значение логина из настроек
+				var login = ConfigurationManager.AppSettings["UserLogin"];
+
+				// В App.config должно быть указано значение логина
+				if (string.IsNullOrEmpty(login))
+					throw new Exception("В настройках отсутствует значение UserLogin.");
+
+				// Получаем значение пароля, может быть пустым
+				var password = ConfigurationManager.AppSettings["UserPassword"];
+
+				// Формируем объект с данными для авторизации
+				var content = JsonConvert.SerializeObject(new { Login = login, Password = password });
+				var authContent = new StringContent(content, Encoding.UTF8, "application/json");
+
+				// Отправляем данные для авторизации, ожидаем получить токен
+				using (var response = await _client.PostAsync(_authLogin, authContent).ConfigureAwait(false))
+				{
+					if (response.StatusCode != HttpStatusCode.OK)
+						throw new Exception($"Сервер вернул статус код с ошибкой: {response.StatusCode}.");
+
+					var user = await response.Content.ReadAsStringAsync();
+
+					if (string.IsNullOrEmpty(user))
+						throw new Exception("Не удалось получить информацию о пользователе.");
+
+					var userObj = JsonConvert.DeserializeObject<User>(user);
+
+					if(string.IsNullOrEmpty(userObj.Token))
+						throw new Exception("Не удалось получить token авторизованного пользователя.");
+
+					_client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", userObj.Token);
+
+					_isAuthCompleted = true;
+				}
+			}
+			catch(Exception ex)
+			{
+				throw new Exception($"Необработанная ошибка при попытке авторизоваться на сервере Rdev: {ex.Message}.");
+			}
+		}
+
+		/// <summary>
 		/// Метод отдачи файлов на Rdev
 		/// </summary>
 		/// <param name="file">Отдаваемый аудиофайл</param>
 		/// <param name="stream">Поток с содержимым файла</param>
 		/// <param name="recid">recid файла, для 1 главы значение recid совпадает с ownerrecid</param>
 		/// <returns></returns>
-		public async Task<HttpStatusCode> Upload(Audiofile file, Stream stream, Guid recid)
+		public async Task Upload(Audiofile file, Stream stream, Guid recid)
 		{
 			byte[] bytes = null;
 
@@ -65,7 +122,7 @@ namespace AudiobookDownloader
 					Mediatype = "audiobook",
 					Chapter = file.Chapter,
 					Ownerrecid = Guid.Parse(file.OwnerRecid),
-					LocalDevicePathUpload = file.AudiobookUrl,
+					LocalDevicePathUpload = Path.GetFileName(file.AudiobookUrl),
 					Name = $"{recid.ToString()}.mp3",		// Описывает непосредственно файл
 					Content = Convert.ToBase64String(bytes),// Описывает непосредственно файл
 					Size = bytes.Length / 1024
@@ -81,8 +138,8 @@ namespace AudiobookDownloader
 			// Выполняем запрос на Rdev
 			using (var response = await _client.PostAsync(_connection, content).ConfigureAwait(false))
 			{
-				var res = response.Content.ReadAsStringAsync();
-				return response.StatusCode;
+				if (response.StatusCode != HttpStatusCode.OK)
+					throw new Exception($"Ошибка при загрузке файла на Rdev. {await response.Content.ReadAsStringAsync()}.");
 			}
 		}
 
@@ -114,6 +171,16 @@ namespace AudiobookDownloader
 			using (var response = await _client.PostAsync(_connection, content).ConfigureAwait(false))
 			{
 				return response.StatusCode;
+			}
+		}
+
+		public async Task TestRequest()
+		{
+			// Выполняем запрос на Rdev
+			using (var response = await _client.PostAsync(_connection, new StringContent("{\"test\": \"testValue \"}", Encoding.UTF8, "application/json")).ConfigureAwait(false))
+			{
+				if (response.StatusCode != HttpStatusCode.OK)
+					throw new Exception("Ошибка");
 			}
 		}
 	}

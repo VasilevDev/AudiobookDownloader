@@ -32,9 +32,10 @@
 			this.AbooksBtn = new System.Windows.Forms.Button();
 			this.label = new System.Windows.Forms.Label();
 			this.groupBox1 = new System.Windows.Forms.GroupBox();
+			this.button1 = new System.Windows.Forms.Button();
 			this.dirUpload = new System.Windows.Forms.Button();
 			this.rdevLoad = new System.Windows.Forms.Button();
-			this.button1 = new System.Windows.Forms.Button();
+			this.TestAuth = new System.Windows.Forms.Button();
 			this.groupBox1.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -45,7 +46,7 @@
 			this.log.Location = new System.Drawing.Point(12, 44);
 			this.log.Name = "log";
 			this.log.ScrollAlwaysVisible = true;
-			this.log.Size = new System.Drawing.Size(718, 452);
+			this.log.Size = new System.Drawing.Size(909, 452);
 			this.log.TabIndex = 0;
 			// 
 			// AbooksBtn
@@ -68,15 +69,26 @@
 			// 
 			// groupBox1
 			// 
+			this.groupBox1.Controls.Add(this.button1);
 			this.groupBox1.Controls.Add(this.dirUpload);
 			this.groupBox1.Controls.Add(this.rdevLoad);
 			this.groupBox1.Controls.Add(this.AbooksBtn);
-			this.groupBox1.Location = new System.Drawing.Point(736, 44);
+			this.groupBox1.Location = new System.Drawing.Point(927, 44);
 			this.groupBox1.Name = "groupBox1";
-			this.groupBox1.Size = new System.Drawing.Size(207, 180);
+			this.groupBox1.Size = new System.Drawing.Size(207, 232);
 			this.groupBox1.TabIndex = 3;
 			this.groupBox1.TabStop = false;
 			this.groupBox1.Text = "Abooks";
+			// 
+			// button1
+			// 
+			this.button1.Location = new System.Drawing.Point(6, 173);
+			this.button1.Name = "button1";
+			this.button1.Size = new System.Drawing.Size(196, 46);
+			this.button1.TabIndex = 4;
+			this.button1.Text = "Загрузить локально";
+			this.button1.UseVisualStyleBackColor = true;
+			this.button1.Click += new System.EventHandler(this.LocalDownload_ClickAsync);
 			// 
 			// dirUpload
 			// 
@@ -86,7 +98,7 @@
 			this.dirUpload.TabIndex = 3;
 			this.dirUpload.Text = "Загрузить из директории";
 			this.dirUpload.UseVisualStyleBackColor = true;
-			this.dirUpload.Click += new System.EventHandler(this.dirUpload_Click);
+			this.dirUpload.Click += new System.EventHandler(this.DirUpload_Click);
 			// 
 			// rdevLoad
 			// 
@@ -96,24 +108,24 @@
 			this.rdevLoad.TabIndex = 2;
 			this.rdevLoad.Text = "Загрузить через Rdev";
 			this.rdevLoad.UseVisualStyleBackColor = true;
-			this.rdevLoad.Click += new System.EventHandler(this.rdevLoad_ClickAsync);
+			this.rdevLoad.Click += new System.EventHandler(this.RdevLoad_ClickAsync);
 			// 
-			// button1
+			// TestAuth
 			// 
-			this.button1.Location = new System.Drawing.Point(736, 450);
-			this.button1.Name = "button1";
-			this.button1.Size = new System.Drawing.Size(201, 46);
-			this.button1.TabIndex = 4;
-			this.button1.Text = "Загрузить локально";
-			this.button1.UseVisualStyleBackColor = true;
-			this.button1.Click += new System.EventHandler(this.button1_ClickAsync);
+			this.TestAuth.Location = new System.Drawing.Point(933, 449);
+			this.TestAuth.Name = "TestAuth";
+			this.TestAuth.Size = new System.Drawing.Size(201, 47);
+			this.TestAuth.TabIndex = 4;
+			this.TestAuth.Text = "TestAuth";
+			this.TestAuth.UseVisualStyleBackColor = true;
+			this.TestAuth.Click += new System.EventHandler(this.TestAuth_Click);
 			// 
 			// AudiobookDownloader
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(950, 511);
-			this.Controls.Add(this.button1);
+			this.ClientSize = new System.Drawing.Size(1146, 543);
+			this.Controls.Add(this.TestAuth);
 			this.Controls.Add(this.groupBox1);
 			this.Controls.Add(this.label);
 			this.Controls.Add(this.log);
@@ -135,6 +147,7 @@
 		private System.Windows.Forms.Button rdevLoad;
 		private System.Windows.Forms.Button dirUpload;
 		private System.Windows.Forms.Button button1;
+		private System.Windows.Forms.Button TestAuth;
 	}
 }
 

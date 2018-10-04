@@ -37,7 +37,13 @@ namespace AudiobookDownloader
 		/// <returns></returns>
 		public async Task Grab(Audiobook audiobook)
 		{
+			// Авторизуемся на сервере Rdev
+			await _client.Authorize();
+
+			// Скачиваем аудиокнигу в локальную директорию
 			await Download(audiobook);
+
+			// Выгружаем аудиокнигу на Rdev из локальной директроии
 			await Upload(audiobook);
 		}
 
@@ -54,15 +60,26 @@ namespace AudiobookDownloader
 		/// <returns></returns>
 		private async Task Download(Audiobook audiobook, string filename = _filename)
 		{
-			bool isDownload = _db.IsDownloadAudiobook(audiobook);
-
-			if (!isDownload)
+			try
 			{
-				using (var fs = new FileStream($"{dirPath}/{filename}", FileMode.Create, FileAccess.ReadWrite))
+				// Проверяем не была ли загружена аудиокнига
+				bool isDownload = _db.IsDownloadAudiobook(audiobook);
+
+				// Если нет, скачиваем
+				if (!isDownload)
 				{
-					await _service.GetAudiobook(audiobook, fs);
-					await _db.SaveDownloadAudiobook(audiobook);
+					using (var fs = new FileStream($"{dirPath}/{filename}", FileMode.Create, FileAccess.ReadWrite))
+					{
+						await _service.GetAudiobook(audiobook, fs);
+
+						// В случае успешного скачивания сохраним информацию об аудиокниге в таблицке загрузок
+						await _db.SaveDownloadAudiobook(audiobook);
+					}
 				}
+			}
+			catch(Exception ex)
+			{
+				throw new Exception($"Необработанная ошибка при загрузке аудиокниги: {audiobook.Title}: {ex.Message}.");
 			}
 		}
 
@@ -75,51 +92,61 @@ namespace AudiobookDownloader
 		/// <returns></returns>
 		private async Task Upload(Audiobook audiobook)
 		{
-			bool isUpload = _db.IsUploadAudiobook(audiobook);
-
-			// Если книга полностью отдана на Rdev, выходим из метода
-			if (isUpload)
-				return;
-
-			Guid ownerRecId = _db.GetOwnerRecid(audiobook);
-
-			using (var zip = ZipFile.OpenRead(_filename))
+			try
 			{
-				int chapter = 0;
+				// Если книга полностью отдана на Rdev, выходим из метода
+				if (_db.IsUploadAudiobook(audiobook))
+					return;
 
-				foreach (var entry in zip.Entries)
+				// Получаем идентификатор аудиокниги
+				Guid ownerRecId = _db.GetOwnerRecid(audiobook);
+
+				// Запускаем пофайловую передачу файлов из архива на Rdev
+				using (var zip = ZipFile.OpenRead(_filename))
 				{
-					if (entry.FullName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
+					int chapter = 0;
+
+					foreach (var entry in zip.Entries)
 					{
-						using (var fs = entry.Open())
+						// Берем только mp3 файлы
+						if (entry.FullName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
 						{
-							Guid recId = Guid.NewGuid();
-
-							var file = new Audiofile()
+							// Получаем файл на отправку
+							using (var fs = entry.Open())
 							{
-								Name = entry.Name,
-								Chapter = ++chapter,
-								OwnerRecid = ownerRecId.ToString(),
-								AudiobookUrl = audiobook.Url
-							};
+								Guid recId = Guid.NewGuid();
 
-							// Проверям был ли отдан файл с таким названием и главой на Rdev, если да, переходим к следующей итерации цикла,
-							// иначе отдаем файл
-							bool isUploadFile = _db.IsUploadAudiofile(file);
+								// Формируем объект прдеставляющий файл для отправки на Rdev
+								var file = new Audiofile()
+								{
+									Name = entry.Name,
+									Chapter = ++chapter,
+									OwnerRecid = ownerRecId.ToString(),
+									AudiobookName = audiobook.Title,
+									AudiobookUrl = audiobook.Url
+								};
 
-							if (isUploadFile)
-								continue;
+								// Проверям был ли отдан файл с таким названием и главой на Rdev, если да, переходим к следующей итерации цикла,
+								// иначе отдаем файл
+								if (_db.IsUploadAudiofile(file))
+									continue;
 
-							await _client.Upload(file, fs, recId);
+								// Отправляем файл на Rdev
+								await _client.Upload(file, fs, recId);
 
-							// Добавляем файл в таблицу отданных файлов
-							await _db.SaveUploadAudiofile(file);
+								// Добавляем файл в таблицу отданных файлов
+								await _db.SaveUploadAudiofile(file);
+							}
 						}
 					}
-				}
 
-				// Добавляем запись о полностью отданной на Rdev книге
-				await _db.SaveUploadAudiobook(audiobook);
+					// Добавляем запись о полностью отданной на Rdev книге
+					await _db.SaveUploadAudiobook(audiobook);
+				}
+			}
+			catch(Exception ex)
+			{
+				throw new Exception($"Необработанная ошибка при попытке выгрузить аудиокнигу: {audiobook.Title} на Rdev: {ex.Message}.");
 			}
 		}
 	}
