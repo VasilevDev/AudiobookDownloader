@@ -142,6 +142,8 @@
     <Compile Include="DatabaseContext\UploadAudiobook.cs" />
     <Compile Include="DatabaseContext\UploadAudiofile.cs" />
     <Compile Include="Grabber.cs" />
+    <Compile Include="Logging\CustomLogger.cs" />
+    <Compile Include="Logging\ICustomLogger.cs" />
     <Compile Include="OwnRadioClient.cs" />
     <Compile Include="AudiobookDownloader.cs">
       <SubType>Form</SubType>

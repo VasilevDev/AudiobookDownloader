@@ -1,11 +1,11 @@
 ﻿using AudiobookDownloader.Auth;
+using AudiobookDownloader.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -16,17 +16,22 @@ namespace AudiobookDownloader
 {
 	class OwnRadioClient
 	{
-		private readonly HttpClient _client;
-		private readonly string _connection = ConfigurationManager.ConnectionStrings["RdevServer"].ConnectionString;
-		private readonly string _authLogin = ConfigurationManager.ConnectionStrings["AuthLogin"].ConnectionString;
-		private bool _isAuthCompleted = false;
+		private readonly HttpClient client;
+		private readonly ICustomLogger logger;
 
-		public OwnRadioClient()
+		private readonly string rdevUrl = ConfigurationManager.ConnectionStrings["RdevServer"].ConnectionString;
+		private readonly string authLogin = ConfigurationManager.ConnectionStrings["AuthLogin"].ConnectionString;
+
+		private bool isAuthCompleted = false;
+
+		public OwnRadioClient(ICustomLogger logger)
 		{
-			_client = new HttpClient
+			client = new HttpClient
 			{
 				Timeout = TimeSpan.FromMinutes(30)
 			};
+
+			this.logger = logger;
 		}
 
 		/// <summary>
@@ -37,9 +42,16 @@ namespace AudiobookDownloader
 		{
 			try
 			{
+				logger.Log("Проверяем нужно ли получать токен авторизации.");
+
 				// Если уже авторизованы, выходим
-				if (_isAuthCompleted)
+				if (isAuthCompleted)
+				{
+					logger.Log("Авторизация была выполнена ранее, выходим из метода.");
 					return;
+				}
+
+				logger.Log("Получаем значение логина и пароля для авторизации.");
 
 				// Получаем значение логина из настроек
 				var login = ConfigurationManager.AppSettings["UserLogin"];
@@ -51,12 +63,16 @@ namespace AudiobookDownloader
 				// Получаем значение пароля, может быть пустым
 				var password = ConfigurationManager.AppSettings["UserPassword"];
 
+				logger.Log($"Login:{login}, Password:{password}.");
+
 				// Формируем объект с данными для авторизации
 				var content = JsonConvert.SerializeObject(new { Login = login, Password = password });
 				var authContent = new StringContent(content, Encoding.UTF8, "application/json");
 
+				logger.Log($"Отправляем запрос на авторизацию, по адресу {authLogin}, указав полученные учетные данные.");
+
 				// Отправляем данные для авторизации, ожидаем получить токен
-				using (var response = await _client.PostAsync(_authLogin, authContent).ConfigureAwait(false))
+				using (var response = await client.PostAsync(authLogin, authContent).ConfigureAwait(false))
 				{
 					if (response.StatusCode != HttpStatusCode.OK)
 						throw new Exception($"Сервер вернул статус код с ошибкой: {response.StatusCode}.");
@@ -71,9 +87,11 @@ namespace AudiobookDownloader
 					if(string.IsNullOrEmpty(userObj.Token))
 						throw new Exception("Не удалось получить token авторизованного пользователя.");
 
-					_client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", userObj.Token);
+					client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", userObj.Token);
 
-					_isAuthCompleted = true;
+					logger.Log("Авторизация успешно выполнена.");
+
+					isAuthCompleted = true;
 				}
 			}
 			catch(Exception ex)
@@ -136,10 +154,10 @@ namespace AudiobookDownloader
 			var content = new StringContent(json, Encoding.UTF8, "application/json");
 
 			// Выполняем запрос на Rdev
-			using (var response = await _client.PostAsync(_connection, content).ConfigureAwait(false))
+			using (var response = await client.PostAsync(rdevUrl, content).ConfigureAwait(false))
 			{
 				if (response.StatusCode != HttpStatusCode.OK)
-					throw new Exception($"Ошибка при загрузке файла на Rdev. {await response.Content.ReadAsStringAsync()}.");
+					throw new Exception(await response.Content.ReadAsStringAsync());
 			}
 		}
 
@@ -168,7 +186,7 @@ namespace AudiobookDownloader
 
 			var content = new StringContent(request.ToString(), Encoding.UTF8, "application/json");
 
-			using (var response = await _client.PostAsync(_connection, content).ConfigureAwait(false))
+			using (var response = await client.PostAsync(rdevUrl, content).ConfigureAwait(false))
 			{
 				return response.StatusCode;
 			}
@@ -176,11 +194,16 @@ namespace AudiobookDownloader
 
 		public async Task TestRequest()
 		{
+			logger.Log("Выполняем тестовый запрос на Rdev.");
+
 			// Выполняем запрос на Rdev
-			using (var response = await _client.PostAsync(_connection, new StringContent("{\"test\": \"testValue \"}", Encoding.UTF8, "application/json")).ConfigureAwait(false))
+			using (var response = await client.PostAsync(rdevUrl, new StringContent("{\"test\": \"testValue \"}", Encoding.UTF8, "application/json")).ConfigureAwait(false))
 			{
 				if (response.StatusCode != HttpStatusCode.OK)
-					throw new Exception("Ошибка");
+				{
+					logger.Warning("Тестовый запрос вернул ошибку, как и ожидалось.");
+					throw new Exception($"Вернулся статус код: {response.StatusCode}.");
+				}
 			}
 		}
 	}

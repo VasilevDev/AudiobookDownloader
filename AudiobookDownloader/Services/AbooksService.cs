@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AngleSharp.Parser.Html;
 using System.Net;
 using System.Configuration;
+using AudiobookDownloader.Logging;
 
 namespace AudiobookDownloader.Service
 {
@@ -22,9 +23,16 @@ namespace AudiobookDownloader.Service
 			Port = Int32.Parse(ConfigurationManager.AppSettings["ProxyPort"])
 		};
 
-		private readonly string baseUrl = ConfigurationManager.AppSettings["AbookService"];
+		private readonly ICustomLogger logger;
+		private readonly string baseUrl;
 		private readonly bool isUseProxy = Boolean.Parse(ConfigurationManager.AppSettings["IsUseProxy"]);
-		private readonly HtmlParser _parser = new HtmlParser();
+		private readonly HtmlParser htmlParser = new HtmlParser();
+
+		public AbooksService(ICustomLogger logger, string baseUrl)
+		{
+			this.logger = logger;
+			this.baseUrl = baseUrl;
+		}
 
 		public async Task<List<Category>> GetCategories()
 		{
@@ -32,7 +40,7 @@ namespace AudiobookDownloader.Service
 			string html = await GetHtml(baseUrl);
 
 			// Получаем объектно-ориентированное представление html документа
-			var parseResult = _parser.Parse(html);
+			var parseResult = htmlParser.Parse(html);
 
 			// Получаем коллекцию с информацией о категориях на сайте
 			var categories = parseResult.GetElementsByClassName("mfn-megamenu-title");
@@ -54,11 +62,15 @@ namespace AudiobookDownloader.Service
 
 		public async Task<List<Audiobook>> GetAudiobooks(Category category, int page)
 		{
+			logger.Log($"Получаем разметку страницы: {$"{category.Url}/page/{page}"}, для парсинга списка аудиокниг.");
+
 			// Получаем html разметку сайта Abooks, с определенной страницы указанной категории
 			string html = await GetHtml($"{category.Url}/page/{page}");
 
+			logger.Log($"Разметка успешно получена, приступаем к парсингу.");
+
 			// Получаем объектно-ориентированное представление html документа
-			var parseResult = _parser.Parse(html);
+			var parseResult = htmlParser.Parse(html);
 
 			// Получаем коллекцию книг со страницы
 			var audiobooks = parseResult.GetElementsByClassName("card__title");
@@ -75,17 +87,26 @@ namespace AudiobookDownloader.Service
 				});
 			}
 
+			logger.Log($"Список аудиокниг со страницы {$"{category.Url}/page/{page}"} успешно получен.");
+
 			return list;
 		}
 
 		public async Task GetAudiobook(Audiobook audiobook, Stream stream)
 		{
+			logger.Log("Получаем идентификатор аудиокниги для скачивания.");
+
 			// Получаем идентификатор книги, по которому будет произведено обращение на скачивание
 			int id = await GetAudiobookId(audiobook);
+
+			logger.Log($"Формируем ссылку для загрузки аудиокниги: {audiobook.Title}.");
+			logger.Log($"Полученная ссылка: {$"{baseUrl}/download/{id}"}.");
 
 			// Формируем запрос на скачивание, если необходимо используем скачивание через proxy сервер
 			HttpWebRequest request = (HttpWebRequest) WebRequest.Create($"{baseUrl}/download/{id}");
 			if (isUseProxy) request.Proxy = new WebProxy(proxy.Ip, proxy.Port);
+
+			logger.Log($"Скачиваем аудиокнигу {audiobook.Title}.");
 
 			HttpWebResponse response = (HttpWebResponse)request.GetResponse();
 			Stream responseStream = response.GetResponseStream();
@@ -96,11 +117,17 @@ namespace AudiobookDownloader.Service
 
 		public async Task<int> GetPagesCount(Category category)
 		{
+			logger.Log($"Попытка получить разметку страницы: {category.Url} для парсинга номеров страниц.");
+
 			// Получаем html разметку сайта Abooks для указанной категории
 			string html = await GetHtml(category.Url);
 
+			logger.Log($"Разметка успешно получена, пытаемся распарсить содержимое.");
+
 			// Получаем объектно - ориентированное представление html документа
-			var parseResult = _parser.Parse(html);
+			var parseResult = htmlParser.Parse(html);
+
+			logger.Log($"Страница успешно распарсена, получаем номер последней страницы.");
 
 			// Получаем из разметки информацию о номерах страниц
 			var pages = parseResult.GetElementsByClassName("page");
@@ -119,6 +146,8 @@ namespace AudiobookDownloader.Service
 				}
 			}
 
+			logger.Log($"Номер последней страницы: {lastPage} успешно получен.");
+
 			return lastPage;
 		}
 
@@ -128,7 +157,7 @@ namespace AudiobookDownloader.Service
 			string html = await GetHtml(audiobook.Url);
 
 			// Получаем объектно - ориентированное представление html документа
-			var parseResult = _parser.Parse(html);
+			var parseResult = htmlParser.Parse(html);
 
 			// Получаем значение идентификатора указанной книги
 			string uri = parseResult.GetElementsByClassName("button button_js button_orange")[0].GetAttribute("href");
