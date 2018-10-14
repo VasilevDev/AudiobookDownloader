@@ -89,7 +89,7 @@ namespace AudiobookDownloader
 
 					client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", userObj.Token);
 
-					logger.Log("Авторизация успешно выполнена.");
+					logger.Success("Авторизация успешно выполнена.");
 
 					isAuthCompleted = true;
 				}

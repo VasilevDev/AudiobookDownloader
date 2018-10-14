@@ -28,10 +28,10 @@ namespace AudiobookDownloader
 			InitializeComponent();
 
 			logger = new CustomLogger(textLog);
+			db = new SqLiteAudiobookRepository();
 			service = new AbooksService(logger, baseUrl);
 			client = new OwnRadioClient(logger);
 			grabber = new Grabber(service, logger, db, client);
-			db = new SqLiteAudiobookRepository();
 
 			if (Boolean.Parse(ConfigurationManager.AppSettings["IsUseProxy"]))
 				IsProxy.Checked = true;
