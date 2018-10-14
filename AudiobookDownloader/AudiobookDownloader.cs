@@ -32,6 +32,9 @@ namespace AudiobookDownloader
 			client = new OwnRadioClient(logger);
 			grabber = new Grabber(service, logger, db, client);
 			db = new SqLiteAudiobookRepository();
+
+			if (Boolean.Parse(ConfigurationManager.AppSettings["IsUseProxy"]))
+				IsProxy.Checked = true;
 		}
 
 		/// <summary>
@@ -343,6 +346,32 @@ namespace AudiobookDownloader
 		private void ClearLog_Click(object sender, EventArgs e)
 		{
 			logger.Clear();
+		}
+
+		/// <summary>
+		/// Метод активирует/деактивирует использование прокси
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
+		private void ProxyItem_Click(object sender, EventArgs e)
+		{
+			try
+			{
+				Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+
+				var isProxy = Boolean.Parse(config.AppSettings.Settings["IsUseProxy"].Value);
+				isProxy = !isProxy;
+				config.AppSettings.Settings["IsUseProxy"].Value = isProxy.ToString();
+				config.Save();
+
+				IsProxy.Checked = isProxy;
+
+				logger.Success($"Использование прокси {(isProxy ? "включено" : "отключено")}.");
+			}
+			catch(Exception ex)
+			{
+				logger.Error("Ошибка при активации/деактивации прокси запросов: " + ex.Message);
+			}
 		}
 	}
 }
