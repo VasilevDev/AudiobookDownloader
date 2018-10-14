@@ -7,6 +7,7 @@ using AngleSharp.Parser.Html;
 using System.Net;
 using System.Configuration;
 using AudiobookDownloader.Logging;
+using System.Net.Http;
 
 namespace AudiobookDownloader.Service
 {
@@ -25,7 +26,7 @@ namespace AudiobookDownloader.Service
 
 		private readonly ICustomLogger logger;
 		private readonly string baseUrl;
-		private readonly bool isUseProxy = Boolean.Parse(ConfigurationManager.AppSettings["IsUseProxy"]);
+		private bool isUseProxy = Boolean.Parse(ConfigurationManager.AppSettings["IsUseProxy"]);
 		private readonly HtmlParser htmlParser = new HtmlParser();
 
 		public AbooksService(ICustomLogger logger, string baseUrl)
@@ -102,6 +103,7 @@ namespace AudiobookDownloader.Service
 			logger.Log($"Формируем ссылку для загрузки аудиокниги: {audiobook.Title}.");
 			logger.Log($"Полученная ссылка: {$"{baseUrl}/download/{id}"}.");
 
+			isUseProxy = Boolean.Parse(ConfigurationManager.AppSettings["IsUseProxy"]);
 			// Формируем запрос на скачивание, если необходимо используем скачивание через proxy сервер
 			HttpWebRequest request = (HttpWebRequest) WebRequest.Create($"{baseUrl}/download/{id}");
 			if (isUseProxy) request.Proxy = new WebProxy(proxy.Ip, proxy.Port);
@@ -168,21 +170,30 @@ namespace AudiobookDownloader.Service
 
 		private async Task<string> GetHtml(string url)
 		{
-			// Формируем запрос на обращение к сервису Abooks
-			HttpWebRequest request = WebRequest.Create(url) as HttpWebRequest;
+			try
+			{
+				isUseProxy = Boolean.Parse(ConfigurationManager.AppSettings["IsUseProxy"]);
 
-			// Если необходимо, обращение выполняем через прокси сервер
-			if(isUseProxy) request.Proxy = new WebProxy(proxy.Ip, proxy.Port);
+				// Формируем запрос на обращение к сервису Abooks
+				HttpWebRequest request = WebRequest.Create(url) as HttpWebRequest;
 
-			// Выполняем запрос
-			HttpWebResponse response = await request.GetResponseAsync() as HttpWebResponse;
-			var stream = response.GetResponseStream();
+				// Если необходимо, обращение выполняем через прокси сервер
+				if (isUseProxy) request.Proxy = new WebProxy(proxy.Ip, proxy.Port);
 
-			// Получаем ответ (текстовое содержимое html разметки)
-			StreamReader reader = new StreamReader(stream);
-			string html = await reader.ReadToEndAsync();
+				// Выполняем запрос
+				HttpWebResponse response = await request.GetResponseAsync() as HttpWebResponse;
+				var stream = response.GetResponseStream();
 
-			return html;
+				// Получаем ответ (текстовое содержимое html разметки)
+				StreamReader reader = new StreamReader(stream);
+				string html = await reader.ReadToEndAsync();
+
+				return html;
+			}
+			catch(Exception ex)
+			{
+				throw new Exception($"Ошибка при выполнении http-запроса: {ex.Message}.");
+			}
 		}
 	}
 }

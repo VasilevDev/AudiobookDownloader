@@ -34,7 +34,10 @@ namespace AudiobookDownloader
 			grabber = new Grabber(service, logger, db, client);
 
 			if (Boolean.Parse(ConfigurationManager.AppSettings["IsUseProxy"]))
+			{
 				IsProxy.Checked = true;
+				proxy.Text = (!IsProxy.Checked) ? string.Empty : ConfigurationManager.AppSettings["ProxyIp"];
+			}
 		}
 
 		/// <summary>
@@ -363,8 +366,11 @@ namespace AudiobookDownloader
 				isProxy = !isProxy;
 				config.AppSettings.Settings["IsUseProxy"].Value = isProxy.ToString();
 				config.Save();
+				ConfigurationManager.RefreshSection("appSettings");
 
 				IsProxy.Checked = isProxy;
+
+				proxy.Text = (!isProxy) ? string.Empty : config.AppSettings.Settings["ProxyIp"].Value;
 
 				logger.Success($"Использование прокси {(isProxy ? "включено" : "отключено")}.");
 			}

@@ -40,6 +40,7 @@
 			this.ClearLog = new System.Windows.Forms.ToolStripMenuItem();
 			this.ProxyItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.IsProxy = new System.Windows.Forms.CheckBox();
+			this.proxy = new System.Windows.Forms.Label();
 			this.groupBox1.SuspendLayout();
 			this.menuStrip1.SuspendLayout();
 			this.SuspendLayout();
@@ -165,12 +166,20 @@
 			this.IsProxy.AutoSize = true;
 			this.IsProxy.Enabled = false;
 			this.IsProxy.Font = new System.Drawing.Font("Comic Sans MS", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-			this.IsProxy.Location = new System.Drawing.Point(794, 507);
+			this.IsProxy.Location = new System.Drawing.Point(788, 471);
 			this.IsProxy.Name = "IsProxy";
 			this.IsProxy.Size = new System.Drawing.Size(87, 24);
 			this.IsProxy.TabIndex = 7;
 			this.IsProxy.Text = "Прокси";
 			this.IsProxy.UseVisualStyleBackColor = true;
+			// 
+			// proxy
+			// 
+			this.proxy.AutoSize = true;
+			this.proxy.Location = new System.Drawing.Point(785, 498);
+			this.proxy.Name = "proxy";
+			this.proxy.Size = new System.Drawing.Size(0, 17);
+			this.proxy.TabIndex = 8;
 			// 
 			// AudiobookDownloader
 			// 
@@ -178,6 +187,7 @@
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.BackColor = System.Drawing.SystemColors.InactiveCaption;
 			this.ClientSize = new System.Drawing.Size(1001, 540);
+			this.Controls.Add(this.proxy);
 			this.Controls.Add(this.IsProxy);
 			this.Controls.Add(this.textLog);
 			this.Controls.Add(this.groupBox1);
@@ -207,6 +217,7 @@
 		private System.Windows.Forms.ToolStripMenuItem ClearLog;
 		private System.Windows.Forms.ToolStripMenuItem ProxyItem;
 		private System.Windows.Forms.CheckBox IsProxy;
+		private System.Windows.Forms.Label proxy;
 	}
 }
 
