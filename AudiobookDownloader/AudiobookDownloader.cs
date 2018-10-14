@@ -8,9 +8,7 @@ using System.Net.Http;
 using System.Text;
 using System.Windows.Forms;
 using AudiobookDownloader.Repository;
-using System.Drawing;
 using AudiobookDownloader.Logging;
-using System.Threading.Tasks;
 
 namespace AudiobookDownloader
 {
@@ -101,19 +99,19 @@ namespace AudiobookDownloader
 
 				int countPage = await service.GetPagesCount(novelty);
 
-				Debug($"Запущена загрузка аудиокнги с сайта {novelty.Url}, количество страниц {countPage}.");
+				logger.Debug($"Запущена загрузка аудиокнги с сайта {novelty.Url}, количество страниц {countPage}.");
 
 				for (int page = countPage; page >= 1; page--)
 				{
 					var audiobooks = await service.GetAudiobooks(novelty, page);
 
-					Debug($"Страница {page}, количество книг на странице {audiobooks.Count}.");
+					logger.Debug($"Страница {page}, количество книг на странице {audiobooks.Count}.");
 
 					foreach (var audiobook in audiobooks)
 					{
 						int audiobookId = await service.GetAudiobookId(audiobook);
 
-						Debug($"Попытка загрузить аудиокнигу {audiobook.Title}.");
+						logger.Debug($"Попытка загрузить аудиокнигу {audiobook.Title}.");
 
 						var result = await client.StartDownload(
 							audiobook.Title, 
@@ -122,15 +120,18 @@ namespace AudiobookDownloader
 						);
 
 						if(result != System.Net.HttpStatusCode.OK)
-							Debug($"При попытке запустить скачивание {audiobook.Title} возникла ошибка.");
+						{
+							logger.Error($"При попытке запустить скачивание {audiobook.Title} возникла ошибка.");
+							return;
+						}
 
-						Debug($"Книга {audiobook.Title} загружена.");
+						logger.Success($"Книга {audiobook.Title} загружена.");
 					}
 				}
 			}
 			catch (Exception ex)
 			{
-				Debug($"Необработанная ошибка: {ex.Message}");
+				logger.Error($"Необработанная ошибка: {ex.Message}");
 			}
 		}
 
@@ -150,18 +151,23 @@ namespace AudiobookDownloader
 				// Заканчиваем работу метода если не удалось найти директорию с аудиокнигами
 				if (!Directory.Exists(path))
 				{
-					Debug("Директория с аудиокнигами не существует!");
+					logger.Warning("Директория с аудиокнигами не существует!");
 					return;
 				}
 
 				// Получаем список файлов из директории (аудиокниги в директории представлены в виде .zip архива)
 				var files = Directory.GetFiles(path);
 
-				Debug("Запущена загрузка аудиокниг из локальной директории");
+				logger.Debug("Запущена загрузка аудиокниг из локальной директории");
 
 				// Запускаем цикл на последовательный обход архива с аудиокнигами
 				foreach (var file in files)
 				{
+					logger.Log($"Количество файлов: {files.Count()}.");
+
+					if (Path.GetExtension(file) != ".zip")
+						continue;
+
 					using (var zip = ZipFile.Open(file, ZipArchiveMode.Read, Encoding.GetEncoding(866)))
 					{
 						//Получаем список файлов
@@ -186,29 +192,31 @@ namespace AudiobookDownloader
 
 						// Сохраняем аудиокнигу в таблицу скаченных аудиокниг
 						await db.SaveDownloadAudiobook(audiobook);
-						Debug($"Попытка загрузки аудиокниги {audiobook.Title}, URL:{audiobook.Url}");
+
+						logger.Debug($"Попытка загрузки аудиокниги {audiobook.Title}, URL:{audiobook.Url}");
 
 						// Получаем все mp3 файлы
 						var mp3Content = zipContent.Where(x => Path.GetExtension(x.Name.Replace('<', ' ').Replace('>', ' ')) == ".mp3").ToList();
 						int chapter = 0;
 
-						Debug($"Количество аудиофайлов: {mp3Content.Count}");
-						Debug($"Проверяем была ли аудиокнига: {audiobook.Title} загружена ранее");
+						logger.Log($"Аудиокнига {audiobook.Title} из {mp3Content.Count} аудиофайлов.");
+						logger.Debug($"Проверяем была ли аудиокнига: {audiobook.Title} загружена ранее.");
 
 						// Если книга полностью отдана на Rdev, идем к следующей
 						if (db.IsUploadAudiobook(audiobook))
 						{
-							Debug($"Количество загруженных книг {++counter}");
+							logger.Warning($"Аудиокнига {audiobook.Title} была ранее передана на Rdev.");
+							logger.Log($"Количество загруженных книг {++counter}.");
 							continue;
 						}
 
-						Debug($"Получаем ownerrecid для файла аудиокниги: {audiobook.Title}");
+						logger.Debug($"Получаем ownerrecid для файла аудиокниги: {audiobook.Title}.");
 
 						// Получаем идентификатор книги, если книга уже выгружалась на рдев но не все файлы были переданы
 						// получаем значение идентификатора из бд иначе если это первая выгрузка формируем новый идентификатор
 						Guid ownerRecId = db.GetOwnerRecid(audiobook);
 
-						Debug($"Запускаем upload аудиофайлов книги: {audiobook.Title}");
+						logger.Debug($"Запускаем upload аудиофайлов книги: {audiobook.Title}.");
 						foreach (var entry in mp3Content)
 						{
 							using (var fs = entry.Open())
@@ -225,43 +233,43 @@ namespace AudiobookDownloader
 									AudiobookUrl = audiobook.Url
 								};
 
-								Debug($"Проверяем отправлялся ли файл {sendedFile.Name} ранее");
+								logger.Debug($"Проверяем отправлялся ли файл {sendedFile.Name} ранее.");
 
 								// Проверям был ли отдан файл с таким названием и главой на Rdev, если да, переходим к следующей итерации цикла,
 								// иначе отдаем файл
 								if (db.IsUploadAudiofile(sendedFile))
 								{
-									Debug($"Файл {sendedFile.Name} уже отправлялся, переходим к следующему");
+									logger.Warning($"Файл {sendedFile.Name} уже отправлялся, переходим к следующему.");
 									continue;
 								}
 
-								Debug($"Отправляем аудиофайл: {sendedFile.Name}");
+								logger.Debug($"Отправляем аудиофайл: {sendedFile.Name}");
 
 								// Отправляем файл на Rdev
 								await client.Upload(sendedFile, fs, recId);
 
-								Debug($"Сохраняем информацию о переданном файле {sendedFile.Name}");
+								logger.Debug($"Сохраняем информацию о переданном файле {sendedFile.Name}");
 
 								// В случае если файл был успешно передан на Rdev (вернулся статус код 200)
-								// сохраняем информацию о файле в бд, иначе выставляем флаг ошибки, и продолжаем передавать следующие файлы
-								// когда отправка всех файлов завершится перед сохранением аудиокниги в успешно отданные анализируем флаг, 
-								// если возникла ошибка то не добавляем аудиокнигу в отданные чтобы можно было повторить upload тех файлов которые не были переданы
 								await db.SaveUploadAudiofile(sendedFile);
+
+								logger.Success($"Информация о файле {sendedFile.Name} была успешно сохранена.");
 							}
 						}
 
-						Debug($"Все файлы аудиокниги {audiobook.Title} были переданны, сохраняем аудиокнигу в историю загрузок.");
+						logger.Debug($"Все файлы аудиокниги {audiobook.Title} были переданны, сохраняем аудиокнигу в историю загрузок.");
 
 						// Добавляем запись о полностью отданной на Rdev книге, если не было ошибки при передаче файлов
 						await db.SaveUploadAudiobook(audiobook);
 
-						Debug($"Количество загруженных книг{++counter}");
+						logger.Success($"Информация об аудиокниге {audiobook.Title} была успешно сохранена.");
+						logger.Debug($"Количество загруженных книг{++counter}");
 					}
 				}
 			}
 			catch(Exception ex)
 			{
-				Error(ex.Message);
+				logger.Error(ex.Message);
 			}
 		}
 
@@ -277,78 +285,64 @@ namespace AudiobookDownloader
 				var novelty = new Category { Name = "Новинки", Url = baseUrl };
 				int countPage = await service.GetPagesCount(novelty);
 
-				Debug($"Запущена загрузка аудиокнги с сайта {novelty.Url}, количество страниц {countPage}.");
+				logger.Debug($"Запущена загрузка аудиокнги с сайта {novelty.Url}, количество страниц {countPage}.");
 
 				for (int page = countPage; page >= 1; page--)
 				{
 					var audiobooks = await service.GetAudiobooks(novelty, page);
 
-					Debug($"Страница {page}, количество книг на странице {audiobooks.Count}.");
+					logger.Log($"Страница {page}, количество книг на странице {audiobooks.Count}.");
 
 					foreach (var audiobook in audiobooks)
 					{
+
+						logger.Debug($"Загружаем аудиокнигу {audiobook.Title}.");
+
 						await grabber.GrabLocal(audiobook);
-						Debug($"Книга {audiobook.Title} загружена.");
+
+						logger.Success($"Аудиокнига {audiobook.Title} загружена.");
 					}
 				}
 			}
 			catch (HttpRequestException ex)
 			{
-				Debug($"Необработанная ошибка: {ex.InnerException.Message}");
+				logger.Error($"Необработанная ошибка: {ex.InnerException.Message}.");
 			}
 			catch (Exception ex)
 			{
-				Debug($"Необработанная ошибка: {ex.Message}");
+				logger.Error($"Необработанная ошибка: {ex.Message}.");
 			}
 		}
 
+		/// <summary>
+		/// Тестовый метод для проверки авторизации на сервере Rdev
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
 		private async void AuthTest_ClickAsync(object sender, EventArgs e)
 		{
 			try
 			{
+				logger.Debug("Запущен тест проверки авторизации на Rdev.");
+
 				await client.Authorize();
-				await client.TestRequest();
+
+				logger.Success("Тест выполнен успешно.");
 			}
 			catch (Exception ex)
 			{
-				logger.Error(ex.Message);
+				logger.Error("Ошибка при выполнении теста: " + ex.Message);
 			}
 		}
 
+		/// <summary>
+		/// Метод очистки лога
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
 		private void ClearLog_Click(object sender, EventArgs e)
 		{
 			logger.Clear();
-		}
-
-		/// <summary>
-		/// Метод вывода текста в лог
-		/// </summary>
-		/// <param name="text"></param>
-		private void Print(string text, Color color)
-		{
-			StringBuilder sb = new StringBuilder();
-
-			sb.Append($"[{DateTime.Now}]:");
-			sb.Append(text);
-			sb.AppendLine();
-
-			textLog.SelectionColor = color;
-			textLog.AppendText(sb.ToString());
-		}
-
-		private void Debug(string text)
-		{
-			Print($"[DEBUG]: {text}", Color.Black);
-		}
-
-		private void Success(string text)
-		{
-			Print($"[SUCCESS]: {text}", Color.Green);
-		}
-
-		private void Error(string text)
-		{
-			Print($"[ERROR]: {text}", Color.Red);
 		}
 	}
 }
