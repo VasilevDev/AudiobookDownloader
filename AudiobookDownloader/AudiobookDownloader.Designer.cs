@@ -41,6 +41,7 @@
 			this.ProxyItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.IsProxy = new System.Windows.Forms.CheckBox();
 			this.proxy = new System.Windows.Forms.Label();
+			this.tmpLabel = new System.Windows.Forms.Label();
 			this.groupBox1.SuspendLayout();
 			this.menuStrip1.SuspendLayout();
 			this.SuspendLayout();
@@ -75,6 +76,7 @@
 			// button1
 			// 
 			this.button1.BackColor = System.Drawing.Color.Lavender;
+			this.button1.Enabled = false;
 			this.button1.FlatStyle = System.Windows.Forms.FlatStyle.System;
 			this.button1.Location = new System.Drawing.Point(6, 173);
 			this.button1.Name = "button1";
@@ -87,6 +89,7 @@
 			// dirUpload
 			// 
 			this.dirUpload.BackColor = System.Drawing.Color.Lavender;
+			this.dirUpload.Enabled = false;
 			this.dirUpload.FlatStyle = System.Windows.Forms.FlatStyle.System;
 			this.dirUpload.Location = new System.Drawing.Point(6, 122);
 			this.dirUpload.Name = "dirUpload";
@@ -99,6 +102,7 @@
 			// rdevLoad
 			// 
 			this.rdevLoad.BackColor = System.Drawing.Color.Lavender;
+			this.rdevLoad.Enabled = false;
 			this.rdevLoad.FlatStyle = System.Windows.Forms.FlatStyle.System;
 			this.rdevLoad.Location = new System.Drawing.Point(6, 72);
 			this.rdevLoad.Name = "rdevLoad";
@@ -143,21 +147,21 @@
 			// AuthTest
 			// 
 			this.AuthTest.Name = "AuthTest";
-			this.AuthTest.Size = new System.Drawing.Size(216, 26);
+			this.AuthTest.Size = new System.Drawing.Size(215, 26);
 			this.AuthTest.Text = "Тест авторизации";
 			this.AuthTest.Click += new System.EventHandler(this.AuthTest_ClickAsync);
 			// 
 			// ClearLog
 			// 
 			this.ClearLog.Name = "ClearLog";
-			this.ClearLog.Size = new System.Drawing.Size(216, 26);
+			this.ClearLog.Size = new System.Drawing.Size(215, 26);
 			this.ClearLog.Text = "Очистить лог";
 			this.ClearLog.Click += new System.EventHandler(this.ClearLog_Click);
 			// 
 			// ProxyItem
 			// 
 			this.ProxyItem.Name = "ProxyItem";
-			this.ProxyItem.Size = new System.Drawing.Size(216, 26);
+			this.ProxyItem.Size = new System.Drawing.Size(215, 26);
 			this.ProxyItem.Text = "Вкл/Откл. прокси";
 			this.ProxyItem.Click += new System.EventHandler(this.ProxyItem_Click);
 			// 
@@ -181,12 +185,24 @@
 			this.proxy.Size = new System.Drawing.Size(0, 17);
 			this.proxy.TabIndex = 8;
 			// 
+			// tmpLabel
+			// 
+			this.tmpLabel.AutoSize = true;
+			this.tmpLabel.Font = new System.Drawing.Font("Comic Sans MS", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+			this.tmpLabel.ForeColor = System.Drawing.Color.DarkRed;
+			this.tmpLabel.Location = new System.Drawing.Point(0, 535);
+			this.tmpLabel.Name = "tmpLabel";
+			this.tmpLabel.Size = new System.Drawing.Size(321, 20);
+			this.tmpLabel.TabIndex = 9;
+			this.tmpLabel.Text = "Три режима загрузки временно отключены";
+			// 
 			// AudiobookDownloader
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.BackColor = System.Drawing.SystemColors.InactiveCaption;
-			this.ClientSize = new System.Drawing.Size(1001, 540);
+			this.ClientSize = new System.Drawing.Size(1001, 564);
+			this.Controls.Add(this.tmpLabel);
 			this.Controls.Add(this.proxy);
 			this.Controls.Add(this.IsProxy);
 			this.Controls.Add(this.textLog);
@@ -218,6 +234,7 @@
 		private System.Windows.Forms.ToolStripMenuItem ProxyItem;
 		private System.Windows.Forms.CheckBox IsProxy;
 		private System.Windows.Forms.Label proxy;
+		private System.Windows.Forms.Label tmpLabel;
 	}
 }
 
