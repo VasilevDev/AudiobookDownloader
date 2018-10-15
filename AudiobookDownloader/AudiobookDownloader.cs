@@ -165,12 +165,11 @@ namespace AudiobookDownloader
 				var files = Directory.GetFiles(path);
 
 				logger.Debug("Запущена загрузка аудиокниг из локальной директории");
+				logger.Log($"Количество файлов: {files.Count()}.");
 
 				// Запускаем цикл на последовательный обход архива с аудиокнигами
 				foreach (var file in files)
 				{
-					logger.Log($"Количество файлов: {files.Count()}.");
-
 					if (Path.GetExtension(file) != ".zip")
 						continue;
 
