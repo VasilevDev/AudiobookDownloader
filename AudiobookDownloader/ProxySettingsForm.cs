@@ -41,12 +41,8 @@ namespace AudiobookDownloader
 
 			ConfigurationManager.RefreshSection("appSettings");
 
+			DialogResult = DialogResult.OK;
 			Close();
-		}
-
-		private void PsCancel_Click(object sender, EventArgs e)
-		{
-			this.Close();
 		}
 	}
 }

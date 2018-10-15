@@ -73,7 +73,6 @@
 			// 
 			// psOk
 			// 
-			this.psOk.DialogResult = System.Windows.Forms.DialogResult.OK;
 			this.psOk.Location = new System.Drawing.Point(27, 93);
 			this.psOk.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
 			this.psOk.Name = "psOk";
@@ -93,7 +92,6 @@
 			this.psCancel.TabIndex = 5;
 			this.psCancel.Text = "Отмена";
 			this.psCancel.UseVisualStyleBackColor = true;
-			this.psCancel.Click += new System.EventHandler(this.PsCancel_Click);
 			// 
 			// Error
 			// 
