@@ -103,7 +103,9 @@ namespace AudiobookDownloader.Service
 			logger.Log($"Формируем ссылку для загрузки аудиокниги: {audiobook.Title}.");
 			logger.Log($"Полученная ссылка: {$"{baseUrl}/download/{id}"}.");
 
-			isUseProxy = Boolean.Parse(ConfigurationManager.AppSettings["IsUseProxy"]);
+			// Обновим состояние прокси т.к возможно были изменения в конфиг файле
+			RefreshProxyState();
+
 			// Формируем запрос на скачивание, если необходимо используем скачивание через proxy сервер
 			HttpWebRequest request = (HttpWebRequest) WebRequest.Create($"{baseUrl}/download/{id}");
 			if (isUseProxy) request.Proxy = new WebProxy(proxy.Ip, proxy.Port);
@@ -172,7 +174,8 @@ namespace AudiobookDownloader.Service
 		{
 			try
 			{
-				isUseProxy = Boolean.Parse(ConfigurationManager.AppSettings["IsUseProxy"]);
+				// Обновим состояние прокси т.к возможно были изменения в конфиг файле
+				RefreshProxyState();
 
 				// Формируем запрос на обращение к сервису Abooks
 				HttpWebRequest request = WebRequest.Create(url) as HttpWebRequest;
@@ -194,6 +197,13 @@ namespace AudiobookDownloader.Service
 			{
 				throw new Exception($"Ошибка при выполнении http-запроса: {ex.Message}.");
 			}
+		}
+
+		private void RefreshProxyState()
+		{
+			isUseProxy = Boolean.Parse(ConfigurationManager.AppSettings["IsUseProxy"]);
+			proxy.Ip = ConfigurationManager.AppSettings["ProxyIp"];
+			proxy.Port = Int32.Parse(ConfigurationManager.AppSettings["ProxyPort"]);
 		}
 	}
 }

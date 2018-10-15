@@ -36,8 +36,9 @@ namespace AudiobookDownloader
 			if (Boolean.Parse(ConfigurationManager.AppSettings["IsUseProxy"]))
 			{
 				IsProxy.Checked = true;
-				proxy.Text = (!IsProxy.Checked) ? string.Empty : ConfigurationManager.AppSettings["ProxyIp"];
 			}
+
+			proxy.Text = ConfigurationManager.AppSettings["ProxyIp"];
 		}
 
 		/// <summary>
@@ -369,13 +370,27 @@ namespace AudiobookDownloader
 
 				IsProxy.Checked = isProxy;
 
-				proxy.Text = (!isProxy) ? string.Empty : config.AppSettings.Settings["ProxyIp"].Value;
-
 				logger.Success($"Использование прокси {(isProxy ? "включено" : "отключено")}.");
 			}
 			catch(Exception ex)
 			{
 				logger.Error("Ошибка при активации/деактивации прокси запросов: " + ex.Message);
+			}
+		}
+
+		/// <summary>
+		/// Метод вызова формы с настройками прокси
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
+		private void ProxySettingsItem_Click(object sender, EventArgs e)
+		{
+			using (var proxySettings = new ProxySettingsForm())
+			{
+				if(proxySettings.ShowDialog() == DialogResult.OK)
+				{
+					proxy.Text = ConfigurationManager.AppSettings.Get("ProxyIp");
+				}
 			}
 		}
 	}

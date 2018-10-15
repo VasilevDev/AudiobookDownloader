@@ -38,7 +38,9 @@
 			this.clearItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.AuthTest = new System.Windows.Forms.ToolStripMenuItem();
 			this.ClearLog = new System.Windows.Forms.ToolStripMenuItem();
+			this.проксиToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.ProxyItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.ProxySettingsItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.IsProxy = new System.Windows.Forms.CheckBox();
 			this.proxy = new System.Windows.Forms.Label();
 			this.tmpLabel = new System.Windows.Forms.Label();
@@ -138,7 +140,7 @@
 			this.clearItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.AuthTest,
             this.ClearLog,
-            this.ProxyItem});
+            this.проксиToolStripMenuItem});
 			this.clearItem.Font = new System.Drawing.Font("Comic Sans MS", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
 			this.clearItem.Name = "clearItem";
 			this.clearItem.Size = new System.Drawing.Size(138, 24);
@@ -147,23 +149,39 @@
 			// AuthTest
 			// 
 			this.AuthTest.Name = "AuthTest";
-			this.AuthTest.Size = new System.Drawing.Size(215, 26);
+			this.AuthTest.Size = new System.Drawing.Size(216, 26);
 			this.AuthTest.Text = "Тест авторизации";
 			this.AuthTest.Click += new System.EventHandler(this.AuthTest_ClickAsync);
 			// 
 			// ClearLog
 			// 
 			this.ClearLog.Name = "ClearLog";
-			this.ClearLog.Size = new System.Drawing.Size(215, 26);
+			this.ClearLog.Size = new System.Drawing.Size(216, 26);
 			this.ClearLog.Text = "Очистить лог";
 			this.ClearLog.Click += new System.EventHandler(this.ClearLog_Click);
+			// 
+			// проксиToolStripMenuItem
+			// 
+			this.проксиToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.ProxyItem,
+            this.ProxySettingsItem});
+			this.проксиToolStripMenuItem.Name = "проксиToolStripMenuItem";
+			this.проксиToolStripMenuItem.Size = new System.Drawing.Size(216, 26);
+			this.проксиToolStripMenuItem.Text = "Прокси";
 			// 
 			// ProxyItem
 			// 
 			this.ProxyItem.Name = "ProxyItem";
-			this.ProxyItem.Size = new System.Drawing.Size(215, 26);
-			this.ProxyItem.Text = "Вкл/Откл. прокси";
+			this.ProxyItem.Size = new System.Drawing.Size(216, 26);
+			this.ProxyItem.Text = "Вкл/Откл";
 			this.ProxyItem.Click += new System.EventHandler(this.ProxyItem_Click);
+			// 
+			// ProxySettingsItem
+			// 
+			this.ProxySettingsItem.Name = "ProxySettingsItem";
+			this.ProxySettingsItem.Size = new System.Drawing.Size(216, 26);
+			this.ProxySettingsItem.Text = "Настройки";
+			this.ProxySettingsItem.Click += new System.EventHandler(this.ProxySettingsItem_Click);
 			// 
 			// IsProxy
 			// 
@@ -231,10 +249,12 @@
 		private System.Windows.Forms.ToolStripMenuItem clearItem;
 		private System.Windows.Forms.ToolStripMenuItem AuthTest;
 		private System.Windows.Forms.ToolStripMenuItem ClearLog;
-		private System.Windows.Forms.ToolStripMenuItem ProxyItem;
 		private System.Windows.Forms.CheckBox IsProxy;
 		private System.Windows.Forms.Label proxy;
 		private System.Windows.Forms.Label tmpLabel;
+		private System.Windows.Forms.ToolStripMenuItem проксиToolStripMenuItem;
+		private System.Windows.Forms.ToolStripMenuItem ProxyItem;
+		private System.Windows.Forms.ToolStripMenuItem ProxySettingsItem;
 	}
 }
 
