@@ -1,4 +1,5 @@
 ﻿using System.Data.Entity;
+using AudiobookDownloader.Entity;
 using SQLite.CodeFirst;
 
 namespace AudiobookDownloader.DatabaseContext
@@ -11,16 +12,11 @@ namespace AudiobookDownloader.DatabaseContext
 
 		}
 
-		public DbSet<UploadAudiofile> UploadAudiofile { get; set; }
-
-		public DbSet<UploadAudiobook> UploadAudiobook { get; set; }
-		public DbSet<DownloadAudiobook> DownloadAudiobook { get; set; }
-
-		public DbSet<DownloadedPage> DownloadedPage { get; set; }
+		public DbSet<Audiobook> Audiobooks { get; set; }
+		public DbSet<Audiofile> Audiofiles { get; set; }
 
 		protected override void OnModelCreating(DbModelBuilder modelBuilder)
 		{
-			//SqliteCreateDatabaseIfNotExists SqliteDropCreateDatabaseAlways
 			var sqliteConnectionInitializer = new SqliteCreateDatabaseIfNotExists<Context>(modelBuilder);
 			Database.SetInitializer(sqliteConnectionInitializer);
 		}

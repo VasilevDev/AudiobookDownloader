@@ -9,6 +9,7 @@ using System.Text;
 using System.Windows.Forms;
 using AudiobookDownloader.Repository;
 using AudiobookDownloader.Logging;
+using AudiobookDownloader.Entity;
 
 namespace AudiobookDownloader
 {
@@ -22,6 +23,7 @@ namespace AudiobookDownloader
 		private readonly Grabber grabber;
 
 		private readonly string baseUrl = ConfigurationManager.AppSettings["AbookService"];
+		private readonly string baseDirectory = ConfigurationManager.AppSettings["Audiobooks"];
 
 		public AudiobookDownloader()
 		{
@@ -31,7 +33,7 @@ namespace AudiobookDownloader
 			db = new SqLiteAudiobookRepository();
 			service = new AbooksService(logger, baseUrl);
 			client = new OwnRadioClient(logger);
-			grabber = new Grabber(service, logger, db, client);
+			grabber = new Grabber(service, logger, db, client, baseDirectory);
 
 			if (Boolean.Parse(ConfigurationManager.AppSettings["IsUseProxy"]))
 			{
@@ -74,12 +76,12 @@ namespace AudiobookDownloader
 					// Запускаем цикл на последовательное скачивание аудиокниг со страницы
 					foreach (var audiobook in audiobooks)
 					{
-						logger.Log($"Загружаем аудиокнигу: {audiobook.Title}.");
+						logger.Log($"Загружаем аудиокнигу: {audiobook.Name}.");
 
 						await grabber.Grab(audiobook);
 						++countDownloaded;
 
-						logger.Success($"Аудиокнига {audiobook.Title} загружена, " +
+						logger.Success($"Аудиокнига {audiobook.Name} загружена, " +
 							$"оставшееся количество аудиокниг на странице {audiobooks.Count - countDownloaded}."
 						);
 					}
@@ -117,22 +119,17 @@ namespace AudiobookDownloader
 					foreach (var audiobook in audiobooks)
 					{
 						int audiobookId = await service.GetAudiobookId(audiobook);
+						audiobook.DownloadUrl = $"{baseUrl}/download/{audiobookId}";
 
-						logger.Debug($"Попытка загрузить аудиокнигу {audiobook.Title}.");
+						logger.Debug($"Попытка загрузить аудиокнигу {audiobook.Name}.");
 
-						var result = await client.StartDownload(
-							audiobook.Title, 
+						await client.StartDownload(
+							audiobook.Name, 
 							audiobook.Url, 
 							$"{baseUrl}/download/{audiobookId}"
 						);
 
-						if(result != System.Net.HttpStatusCode.OK)
-						{
-							logger.Error($"При попытке запустить скачивание {audiobook.Title} возникла ошибка.");
-							return;
-						}
-
-						logger.Success($"Книга {audiobook.Title} загружена.");
+						logger.Success($"Книга {audiobook.Name} загружена.");
 					}
 				}
 			}
@@ -151,22 +148,21 @@ namespace AudiobookDownloader
 		{
 			try
 			{
-				// Получаем путь к директории с аудиокнигами
-				var path = ConfigurationManager.AppSettings["Audiobooks"];
-				int counter = 0;
-
 				// Заканчиваем работу метода если не удалось найти директорию с аудиокнигами
-				if (!Directory.Exists(path))
+				if (!Directory.Exists(baseDirectory))
 				{
 					logger.Warning("Директория с аудиокнигами не существует!");
 					return;
 				}
 
 				// Получаем список файлов из директории (аудиокниги в директории представлены в виде .zip архива)
-				var files = Directory.GetFiles(path);
+				var files = Directory.GetFiles(baseDirectory);
 
 				logger.Debug("Запущена загрузка аудиокниг из локальной директории");
 				logger.Log($"Количество файлов: {files.Count()}.");
+
+				// Количество загруженных аудиокниг
+				int counter = 0;
 
 				// Запускаем цикл на последовательный обход архива с аудиокнигами
 				foreach (var file in files)
@@ -192,37 +188,40 @@ namespace AudiobookDownloader
 						// Формируем объект аудиокниги
 						var audiobook = new Audiobook
 						{
-							Title = Path.GetFileNameWithoutExtension(txtName.Name.Replace('<', ' ').Replace('>', ' ')),
-							Url = txtContnent
+							Name = Path.GetFileNameWithoutExtension(txtName.Name.Replace('<', ' ').Replace('>', ' ')),
+							Url = txtContnent,
+							OriginalName = Path.GetFileName(txtContnent)
 						};
 
 						// Сохраняем аудиокнигу в таблицу скаченных аудиокниг
 						await db.SaveDownloadAudiobook(audiobook);
 
-						logger.Debug($"Попытка загрузки аудиокниги {audiobook.Title}, URL:{audiobook.Url}");
+						logger.Debug($"Попытка загрузки аудиокниги {audiobook.Name}, URL:{audiobook.Url}");
 
 						// Получаем все mp3 файлы
 						var mp3Content = zipContent.Where(x => Path.GetExtension(x.Name.Replace('<', ' ').Replace('>', ' ')) == ".mp3").ToList();
 						int chapter = 0;
 
-						logger.Log($"Аудиокнига {audiobook.Title} из {mp3Content.Count} аудиофайлов.");
-						logger.Debug($"Проверяем была ли аудиокнига: {audiobook.Title} загружена ранее.");
+						audiobook.FilesCount = mp3Content.Count;
+
+						logger.Log($"Аудиокнига {audiobook.Name} из {mp3Content.Count} аудиофайлов.");
+						logger.Debug($"Проверяем была ли аудиокнига: {audiobook.Name} загружена ранее.");
 
 						// Если книга полностью отдана на Rdev, идем к следующей
-						if (db.IsUploadAudiobook(audiobook))
+						if (await db.IsUploadAudiobook(audiobook))
 						{
-							logger.Warning($"Аудиокнига {audiobook.Title} была ранее передана на Rdev.");
+							logger.Warning($"Аудиокнига {audiobook.Name} была ранее передана на Rdev.");
 							logger.Log($"Количество загруженных книг {++counter}.");
 							continue;
 						}
 
-						logger.Debug($"Получаем ownerrecid для файла аудиокниги: {audiobook.Title}.");
+						logger.Debug($"Получаем ownerrecid для файла аудиокниги: {audiobook.Name}.");
 
 						// Получаем идентификатор книги, если книга уже выгружалась на рдев но не все файлы были переданы
 						// получаем значение идентификатора из бд иначе если это первая выгрузка формируем новый идентификатор
-						Guid ownerRecId = db.GetOwnerRecid(audiobook);
+						Guid ownerRecId = await db.GetOwnerRecid(audiobook);
 
-						logger.Debug($"Запускаем upload аудиофайлов книги: {audiobook.Title}.");
+						logger.Debug($"Запускаем upload аудиофайлов книги: {audiobook.Name}.");
 						foreach (var entry in mp3Content)
 						{
 							using (var fs = entry.Open())
@@ -235,15 +234,17 @@ namespace AudiobookDownloader
 									Name = entry.Name,
 									Chapter = ++chapter,
 									OwnerRecid = ownerRecId.ToString(),
-									AudiobookName = audiobook.Title,
-									AudiobookUrl = audiobook.Url
+									AudiobookName = audiobook.Name,
+									AudiobookUrl = audiobook.Url,
+									AudiobookOriginalName = audiobook.OriginalName,
+									Size = entry.Length
 								};
 
 								logger.Debug($"Проверяем отправлялся ли файл {sendedFile.Name} ранее.");
 
 								// Проверям был ли отдан файл с таким названием и главой на Rdev, если да, переходим к следующей итерации цикла,
 								// иначе отдаем файл
-								if (db.IsUploadAudiofile(sendedFile))
+								if (await db.IsUploadAudiofile(sendedFile))
 								{
 									logger.Warning($"Файл {sendedFile.Name} уже отправлялся, переходим к следующему.");
 									continue;
@@ -263,12 +264,12 @@ namespace AudiobookDownloader
 							}
 						}
 
-						logger.Debug($"Все файлы аудиокниги {audiobook.Title} были переданны, сохраняем аудиокнигу в историю загрузок.");
+						logger.Debug($"Все файлы аудиокниги {audiobook.Name} были переданны, сохраняем аудиокнигу в историю загрузок.");
 
 						// Добавляем запись о полностью отданной на Rdev книге, если не было ошибки при передаче файлов
 						await db.SaveUploadAudiobook(audiobook);
 
-						logger.Success($"Информация об аудиокниге {audiobook.Title} была успешно сохранена.");
+						logger.Success($"Информация об аудиокниге {audiobook.Name} была успешно сохранена.");
 						logger.Debug($"Количество загруженных книг{++counter}");
 					}
 				}
@@ -302,11 +303,11 @@ namespace AudiobookDownloader
 					foreach (var audiobook in audiobooks)
 					{
 
-						logger.Debug($"Загружаем аудиокнигу {audiobook.Title}.");
+						logger.Debug($"Загружаем аудиокнигу {audiobook.Name}.");
 
 						await grabber.GrabLocal(audiobook);
 
-						logger.Success($"Аудиокнига {audiobook.Title} загружена.");
+						logger.Success($"Аудиокнига {audiobook.Name} загружена.");
 					}
 				}
 			}

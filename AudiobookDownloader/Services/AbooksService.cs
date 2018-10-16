@@ -8,6 +8,7 @@ using System.Net;
 using System.Configuration;
 using AudiobookDownloader.Logging;
 using System.Net.Http;
+using AudiobookDownloader.Entity;
 
 namespace AudiobookDownloader.Service
 {
@@ -83,7 +84,8 @@ namespace AudiobookDownloader.Service
 			{
 				list.Add(new Audiobook
 				{
-					Title = audiobook.FirstElementChild.TextContent,
+					Name = audiobook.FirstElementChild.TextContent,
+					OriginalName = Path.GetFileName(audiobook.FirstElementChild.GetAttribute("href")),
 					Url = audiobook.FirstElementChild.GetAttribute("href")
 				});
 			}
@@ -99,21 +101,25 @@ namespace AudiobookDownloader.Service
 
 			// Получаем идентификатор книги, по которому будет произведено обращение на скачивание
 			int id = await GetAudiobookId(audiobook);
+			string downloadUrl = $"{baseUrl}/download/{id}";
 
-			logger.Log($"Формируем ссылку для загрузки аудиокниги: {audiobook.Title}.");
-			logger.Log($"Полученная ссылка: {$"{baseUrl}/download/{id}"}.");
+			logger.Log($"Формируем ссылку для загрузки аудиокниги: {audiobook.Name}.");
+			logger.Log($"Полученная ссылка: {downloadUrl}.");
 
 			// Обновим состояние прокси т.к возможно были изменения в конфиг файле
 			RefreshProxyState();
 
 			// Формируем запрос на скачивание, если необходимо используем скачивание через proxy сервер
-			HttpWebRequest request = (HttpWebRequest) WebRequest.Create($"{baseUrl}/download/{id}");
+			HttpWebRequest request = (HttpWebRequest) WebRequest.Create(downloadUrl);
 			if (isUseProxy) request.Proxy = new WebProxy(proxy.Ip, proxy.Port);
 
-			logger.Log($"Скачиваем аудиокнигу {audiobook.Title}.");
+			logger.Log($"Скачиваем аудиокнигу {audiobook.Name}.");
 
 			HttpWebResponse response = (HttpWebResponse)request.GetResponse();
 			Stream responseStream = response.GetResponseStream();
+
+			// Запишем ссылку на скачивание
+			audiobook.DownloadUrl = downloadUrl;
 
 			// Скачиваем аудиокнигу
 			await responseStream.CopyToAsync(stream);

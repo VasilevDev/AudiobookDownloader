@@ -1,10 +1,12 @@
-﻿using AudiobookDownloader.Logging;
+﻿using AudiobookDownloader.Entity;
+using AudiobookDownloader.Logging;
 using AudiobookDownloader.Repository;
 using AudiobookDownloader.Service;
 using System;
 using System.Configuration;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace AudiobookDownloader
@@ -17,17 +19,22 @@ namespace AudiobookDownloader
 
 		private readonly OwnRadioClient client;
 		private const string fileName = "tmp.zip";
-		private readonly string dirPath = ConfigurationManager.AppSettings["Audiobooks"];
+		private string fileFullName;
+		private readonly string dirPath;
 
-		public Grabber(IAudiobookService service, ICustomLogger logger, IAudiobookRepository db, OwnRadioClient client)
+		public Grabber(IAudiobookService service, ICustomLogger logger, IAudiobookRepository db, OwnRadioClient client, string dirPath)
 		{
-			if (!Directory.Exists(dirPath))
-				Directory.CreateDirectory(dirPath);
-
 			this.logger = logger;
 			this.service = service;
 			this.db = db;
 			this.client = client;
+			this.dirPath = dirPath;
+
+			if (!Directory.Exists(this.dirPath))
+				Directory.CreateDirectory(this.dirPath);
+
+			// Запишем в переменную полный путь к файлу, чтобы иметь к нему доступ в методе upload
+			fileFullName = $"{dirPath}/{fileName}";
 		}
 
 		/// <summary>
@@ -55,7 +62,7 @@ namespace AudiobookDownloader
 
 		public async Task GrabLocal(Audiobook audiobook)
 		{
-			await Download(audiobook, $"{audiobook.Title}.zip");
+			await Download(audiobook, $"{audiobook.Name}.zip");
 		}
 
 		/// <summary>
@@ -68,26 +75,32 @@ namespace AudiobookDownloader
 		{
 			try
 			{
-				logger.Log($"Проверяем, нет ли в БД в таблице скаченных аудиокниг информации об аудиокниге: {audiobook.Title}.");
+				logger.Log($"Проверяем, нет ли в БД в таблице скаченных аудиокниг информации об аудиокниге: {audiobook.Name}.");
+
+				// Запишем в переменную полный путь к файлу, чтобы иметь к нему доступ в методе upload
+				fileFullName = $"{dirPath}/{filename}";
 
 				// Проверяем не была ли загружена аудиокнига
-				bool isDownload = db.IsDownloadAudiobook(audiobook);
+				bool isDownload = await db.IsDownloadAudiobook(audiobook);
 
 				// Если нет, скачиваем
 				if (!isDownload)
 				{
-					logger.Log($"Аудиокнига {audiobook.Title} не скачивалась ранее, запускаем загрузку.");
+					logger.Log($"Аудиокнига {audiobook.Name} не скачивалась ранее, запускаем загрузку.");
 					logger.Log($"Абсолютный путь к файлу на диске: {$"{dirPath}/{filename}"}.");
 
-					using (var fs = new FileStream($"{dirPath}/{filename}", FileMode.Create, FileAccess.ReadWrite))
+					using (var fs = new FileStream(fileFullName, FileMode.Create, FileAccess.ReadWrite))
 					{
-						logger.Debug($"Запускаем скачивание аудиокниги {audiobook.Title}.");
+						logger.Debug($"Запускаем скачивание аудиокниги {audiobook.Name}.");
 
 						await service.GetAudiobook(audiobook, fs);
 
-						logger.Success($"Аудиокнига {audiobook.Title} успешно скачена. " +
+						logger.Success($"Аудиокнига {audiobook.Name} успешно скачена. " +
 							$"Сохраняем информацию в БД, в таблицу загруженных аудиокниг."
 						);
+
+						audiobook.LocalPath = $"{dirPath}/{filename}";
+						audiobook.Size = fs.Length;
 
 						// В случае успешного скачивания сохраним информацию об аудиокниге в таблицке загрузок
 						await db.SaveDownloadAudiobook(audiobook);
@@ -97,7 +110,7 @@ namespace AudiobookDownloader
 				}
 				else
 				{
-					logger.Log($"Аудиокнига {audiobook.Title} существует в таблице скаченных аудиокниг, поэтому пропускаем скачивание.");
+					logger.Log($"Аудиокнига {audiobook.Name} существует в таблице скаченных аудиокниг, поэтому пропускаем скачивание.");
 				}
 			}
 			catch (Exception ex)
@@ -117,25 +130,30 @@ namespace AudiobookDownloader
 		{
 			try
 			{
-				logger.Log($"Проверяем была ли аудиокнига {audiobook.Title} полностью на Rdev.");
+				logger.Log($"Проверяем была ли аудиокнига {audiobook.Name} полностью на Rdev.");
 
 				// Если книга полностью отдана на Rdev, выходим из метода
-				if (db.IsUploadAudiobook(audiobook))
+				if (await db.IsUploadAudiobook(audiobook))
 				{
-					logger.Log($"Аудиокнига {audiobook.Title} была полностью отдана на Rdev, выходим из метода.");
+					logger.Log($"Аудиокнига {audiobook.Name} была полностью отдана на Rdev, выходим из метода.");
 					return;
 				}
 
-				logger.Log($"Получаем значение ownerrecid для аудиокниги {audiobook.Title}.");
+				logger.Log($"Получаем значение ownerrecid для аудиокниги {audiobook.Name}.");
 
 				// Получаем идентификатор аудиокниги
-				Guid ownerRecId = db.GetOwnerRecid(audiobook);
+				Guid ownerRecId = await db.GetOwnerRecid(audiobook);
 
 				logger.Log($"Запускаем чтение архива с аудиокнигой по адресу {fileName}.");
 
 				// Запускаем пофайловую передачу файлов из архива на Rdev
-				using (var zip = ZipFile.OpenRead(fileName))
+				using (var zip = ZipFile.OpenRead(fileFullName))
 				{
+					// Запишем количество аудиофайлов
+					audiobook.FilesCount = zip.Entries
+						.Select(x => x.FullName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
+						.Count();
+
 					int chapter = 0;
 
 					foreach (var entry in zip.Entries)
@@ -156,15 +174,17 @@ namespace AudiobookDownloader
 									Name = entry.Name,
 									Chapter = ++chapter,
 									OwnerRecid = ownerRecId.ToString(),
-									AudiobookName = audiobook.Title,
-									AudiobookUrl = audiobook.Url
+									AudiobookName = audiobook.Name,
+									AudiobookUrl = audiobook.Url,
+									AudiobookOriginalName = audiobook.OriginalName,
+									Size = entry.Length
 								};
 
 								logger.Log($"Проверяем отправлялся ли аудиофайл {entry.Name} ранее на Rdev.");
 
 								// Проверям был ли отдан файл с таким названием и главой на Rdev, если да, переходим к следующей итерации цикла,
 								// иначе отдаем файл
-								if (db.IsUploadAudiofile(file))
+								if (await db.IsUploadAudiofile(file))
 								{
 									logger.Log($"Аудиофайл {entry.Name} ранее был отправлен на Rdev, переходим к следующему.");
 									continue;
@@ -188,8 +208,8 @@ namespace AudiobookDownloader
 						}
 					}
 
-					logger.Success($"Аудиокнига {audiobook.Title} была полностью передана на Rdev.");
-					logger.Log($"Сохраняем информацию об аудиокниге {audiobook.Title} в таблицу отданных на Rdev аудиокниг.");
+					logger.Success($"Аудиокнига {audiobook.Name} была полностью передана на Rdev.");
+					logger.Log($"Сохраняем информацию об аудиокниге {audiobook.Name} в таблицу отданных на Rdev аудиокниг.");
 
 					// Добавляем запись о полностью отданной на Rdev книге
 					await db.SaveUploadAudiobook(audiobook);

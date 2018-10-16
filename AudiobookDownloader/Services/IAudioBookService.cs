@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using AudiobookDownloader.Entity;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 

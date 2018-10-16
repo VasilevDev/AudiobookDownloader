@@ -1,4 +1,5 @@
 ﻿using AudiobookDownloader.Auth;
+using AudiobookDownloader.Entity;
 using AudiobookDownloader.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -30,7 +31,6 @@ namespace AudiobookDownloader
 			{
 				Timeout = TimeSpan.FromMinutes(30)
 			};
-
 			this.logger = logger;
 		}
 
@@ -168,7 +168,7 @@ namespace AudiobookDownloader
 		/// <param name="url"></param>
 		/// <param name="downloadUrl"></param>
 		/// <returns></returns>
-		public async Task<HttpStatusCode> StartDownload(string name, string url, string downloadUrl)
+		public async Task StartDownload(string name, string url, string downloadUrl)
 		{
 			JObject request = new JObject
 			{
@@ -184,11 +184,19 @@ namespace AudiobookDownloader
 				}
 			};
 
+			// Проведем авторизацию если это необходимо
+			await Authorize();
+
 			var content = new StringContent(request.ToString(), Encoding.UTF8, "application/json");
 
 			using (var response = await client.PostAsync(rdevUrl, content).ConfigureAwait(false))
 			{
-				return response.StatusCode;
+				if (response.StatusCode != HttpStatusCode.OK)
+				{
+					throw new Exception(
+						$"Ошибка при попытке запустить скачивание аудиокниги через Rdev. Сервер вернул статус код: {response.StatusCode}."
+					);
+				}
 			}
 		}
 

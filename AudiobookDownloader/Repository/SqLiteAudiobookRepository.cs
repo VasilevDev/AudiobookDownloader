@@ -1,116 +1,194 @@
 ﻿using AudiobookDownloader.DatabaseContext;
+using AudiobookDownloader.Entity;
 using System;
-using System.Linq;
+using System.Data.Entity;
 using System.Threading.Tasks;
 
 namespace AudiobookDownloader.Repository
 {
 	class SqLiteAudiobookRepository : IAudiobookRepository
 	{
-		public bool IsDownloadAudiobook(Audiobook audiobook)
+		public async Task<bool> IsDownloadAudiobook(Audiobook audiobook)
 		{
-			using (var context = new Context())
+			using (var db = new Context())
 			{
-				if (context.DownloadAudiobook.Count() > 0)
-				{
-					var dbItem = context.DownloadAudiobook.Select(m => m.Audiobook).Where(m =>
-						m.Title == audiobook.Title &&
-						m.Url == audiobook.Url
-					).FirstOrDefault();
+				if (await db.Audiobooks.CountAsync() <= 0)
+					return false;
 
-					return (dbItem != null);
-				}
-
-				return false;
+				var dbItem = await db.Audiobooks
+					.FirstOrDefaultAsync(x => x.OriginalName == audiobook.OriginalName && x.IsFullDownloaded);
+				return dbItem != null;
 			}
 		}
 
-		public bool IsUploadAudiobook(Audiobook audiobook)
+		public async Task<bool> IsUploadAudiobook(Audiobook audiobook)
 		{
-			using (var context = new Context())
+			using (var db = new Context())
 			{
-				if (context.UploadAudiobook.Count() > 0)
-				{
-					var dbItem = context.UploadAudiobook.Select(m => m.Audiobook)
-						.Where(m =>
-							m.Title == audiobook.Title &&
-							m.Url == audiobook.Url
-						).FirstOrDefault();
+				if (await db.Audiobooks.CountAsync() <= 0)
+					return false;
 
-					return (dbItem != null);
-				}
-
-				return false;
+				var dbItem = await db.Audiobooks
+					.FirstOrDefaultAsync(x => x.OriginalName == audiobook.OriginalName && x.IsFullUploaded);
+				return dbItem != null;
 			}
 		}
 
-		public bool IsUploadAudiofile(Audiofile audiofile)
+		public async Task<bool> IsUploadAudiofile(Audiofile audiofile)
 		{
-			using (var context = new Context())
+			using (var db = new Context())
 			{
-				if (context.UploadAudiofile.Count() > 0)
-				{
-					var dbItem = context.UploadAudiofile
-					.Select(m => m.File)
-					.Where(m =>
-						m.Name == audiofile.Name &&
-						m.Chapter == audiofile.Chapter &&
-						m.OwnerRecid == audiofile.OwnerRecid
-					).FirstOrDefault();
+				if (await db.Audiofiles.CountAsync() <= 0)
+					return false;
 
-					return (dbItem != null);
-				}
+				var dbItem = await db.Audiofiles.FirstOrDefaultAsync(x => 
+					x.Name == audiofile.Name && 
+					x.Chapter == audiofile.Chapter && 
+					x.OwnerRecid == audiofile.OwnerRecid &&
+					x.IsFullUploaded
+				);
 
-				return false;
+				return dbItem != null;
 			}
 		}
 
-		public Guid GetOwnerRecid(Audiobook audiobook)
+		public async Task<Guid> GetOwnerRecid(Audiobook audiobook)
 		{
-			using(var context = new Context())
+			using(var db = new Context())
 			{
-				if (context.UploadAudiofile.Count() > 0)
-				{
-					var dbItem = context.UploadAudiofile.Select(m => m.File).Where(m => m.AudiobookUrl == audiobook.Url).FirstOrDefault();
+				if (await db.Audiofiles.CountAsync() <= 0)
+					return Guid.NewGuid();
 
-					if (dbItem != null)
-						return Guid.Parse(dbItem.OwnerRecid);
-				}
-
-				return Guid.NewGuid();
+				var dbItem = await db.Audiofiles.FirstOrDefaultAsync(x => x.AudiobookOriginalName == audiobook.OriginalName);
+				return dbItem != null ? Guid.Parse(dbItem.OwnerRecid) : Guid.NewGuid();
 			}
 		}
 
 		public async Task SaveDownloadAudiobook(Audiobook audiobook)
 		{
-			var context = new Context();
-
-			if (!IsDownloadAudiobook(audiobook))
+			using(var db = new Context())
 			{
-				context.DownloadAudiobook.Add(new DownloadAudiobook { Audiobook = audiobook });
-				await context.SaveChangesAsync();
+				if(await db.Audiobooks.CountAsync() <= 0)
+				{
+					audiobook.Created = DateTime.Now;
+					audiobook.IsFullDownloaded = true;
+
+					db.Audiobooks.Add(audiobook);
+				}
+				else
+				{
+					var dbItem = await db.Audiobooks
+						.FirstOrDefaultAsync(x => x.OriginalName == audiobook.OriginalName);
+
+					if (dbItem == null)
+					{
+						audiobook.Created = DateTime.Now;
+						audiobook.IsFullDownloaded = true;
+
+						db.Audiobooks.Add(audiobook);
+					}
+					else
+					{
+						dbItem.Updated = DateTime.Now;
+						dbItem.IsFullDownloaded = true;
+					}
+				}
+
+				await db.SaveChangesAsync();
 			}
 		}
 
 		public async Task SaveUploadAudiobook(Audiobook audiobook)
 		{
-			var context = new Context();
-
-			if (!IsUploadAudiobook(audiobook))
+			using(var db = new Context())
 			{
-				context.UploadAudiobook.Add(new UploadAudiobook { Audiobook = audiobook });
-				await context.SaveChangesAsync();
+				if(await db.Audiobooks.CountAsync() <= 0)
+				{
+					audiobook.Updated = DateTime.Now;
+					audiobook.IsFullUploaded = true;
+
+					db.Audiobooks.Add(audiobook);
+				}
+				else
+				{
+					var dbItem = await db.Audiobooks.FirstOrDefaultAsync(x => x.OriginalName == audiobook.OriginalName);
+
+					if (dbItem == null)
+					{
+						audiobook.Updated = DateTime.Now;
+						audiobook.IsFullUploaded = true;
+
+						db.Audiobooks.Add(audiobook);
+					}
+					else
+					{
+						dbItem.Updated = DateTime.Now;
+						dbItem.IsFullUploaded = true;
+					}
+				}
+
+				await db.SaveChangesAsync();
 			}
 		}
 
 		public async Task SaveUploadAudiofile(Audiofile audiofile)
 		{
-			var context = new Context();
-
-			if (!IsUploadAudiofile(audiofile))
+			using(var db = new Context())
 			{
-				context.UploadAudiofile.Add(new UploadAudiofile { File = audiofile });
-				await context.SaveChangesAsync();
+				if(await db.Audiofiles.CountAsync() <= 0)
+				{
+					audiofile.Created = DateTime.Now;
+					audiofile.Updated = DateTime.Now;
+					audiofile.IsFullUploaded = true;
+
+					db.Audiofiles.Add(audiofile);
+				}
+				else
+				{
+					var dbItem = await db.Audiofiles.FirstOrDefaultAsync(x =>
+						x.Name == audiofile.Name &&
+						x.Chapter == audiofile.Chapter &&
+						x.OwnerRecid == audiofile.OwnerRecid
+					);
+
+					if(dbItem == null)
+					{
+						audiofile.Created = DateTime.Now;
+						audiofile.Updated = DateTime.Now;
+						audiofile.IsFullUploaded = true;
+
+						db.Audiofiles.Add(audiofile);
+					}
+					else
+					{
+						dbItem.IsFullUploaded = true;
+						dbItem.Updated = DateTime.Now;
+					}
+				}
+
+				await db.SaveChangesAsync();
+			}
+		}
+
+		public async Task UpdateAudiobook(string originName, Action<Audiobook> action)
+		{
+			if (string.IsNullOrEmpty(originName))
+				throw new ArgumentNullException("Отсутствует значение ключа при обновлении записи об аудиокниге.");
+
+			if (action == null)
+				throw new ArgumentNullException("Отсутствует ссылка на действие для обновления записи об аудиокниге.");
+
+			using(var db = new Context())
+			{
+				var dbItem = await db.Audiobooks.FirstOrDefaultAsync(x => x.OriginalName == originName);
+
+				if (dbItem == null)
+					throw new Exception("Не удалось найти запись об аудиокниге для обновления.");
+
+				action(dbItem);
+				dbItem.Updated = DateTime.Now;
+
+				await db.SaveChangesAsync();
 			}
 		}
 	}

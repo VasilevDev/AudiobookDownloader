@@ -133,14 +133,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Audiobook.cs" />
-    <Compile Include="Audiofile.cs" />
+    <Compile Include="Entity\Audiobook.cs" />
+    <Compile Include="Entity\Audiofile.cs" />
     <Compile Include="Auth\User.cs" />
     <Compile Include="Category.cs" />
-    <Compile Include="DatabaseContext\DownloadAudiobook.cs" />
-    <Compile Include="DatabaseContext\DownloadedPage.cs" />
-    <Compile Include="DatabaseContext\UploadAudiobook.cs" />
-    <Compile Include="DatabaseContext\UploadAudiofile.cs" />
+    <Compile Include="Entity\BaseEntity.cs" />
     <Compile Include="Grabber.cs" />
     <Compile Include="Logging\CustomLogger.cs" />
     <Compile Include="Logging\ICustomLogger.cs" />
