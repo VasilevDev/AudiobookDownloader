@@ -154,6 +154,11 @@ namespace AudiobookDownloader
 						.Select(x => x.FullName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
 						.Count();
 
+					await db.UpdateAudiobook(audiobook.OriginalName, (item) =>
+					{
+						item.FilesCount = audiobook.FilesCount;
+					});
+
 					int chapter = 0;
 
 					foreach (var entry in zip.Entries)
