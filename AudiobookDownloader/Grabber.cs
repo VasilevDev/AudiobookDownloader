@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace AudiobookDownloader
 {
-	class Grabber
+	public class Grabber
 	{
 		private readonly ICustomLogger logger;
 		private readonly IAudiobookService service;

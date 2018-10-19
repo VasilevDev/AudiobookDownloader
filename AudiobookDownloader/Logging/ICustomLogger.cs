@@ -1,6 +1,6 @@
 ﻿namespace AudiobookDownloader.Logging
 {
-	interface ICustomLogger
+	public interface ICustomLogger
 	{
 		void Log(string text);
 		void Debug(string text);

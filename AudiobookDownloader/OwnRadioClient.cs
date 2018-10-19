@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace AudiobookDownloader
 {
-	class OwnRadioClient
+	public class OwnRadioClient
 	{
 		private readonly HttpClient client;
 		private readonly ICustomLogger logger;
@@ -200,18 +200,40 @@ namespace AudiobookDownloader
 			}
 		}
 
-		public async Task TestRequest()
+		/// <summary>
+		/// Запускаем скачивание аудиокниги на стороне Rdev
+		/// </summary>
+		/// <param name="url"></param>
+		/// <returns></returns>
+		public async Task RunRdevDownload(string url)
 		{
-			logger.Log("Выполняем тестовый запрос на Rdev.");
+			string json = JsonConvert.SerializeObject(new {
+				method = "downloadaudiobook",
+				fields = new { url}
+			});
 
+			var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+			var result = await SendRequest(rdevUrl, content);
+
+			if (string.IsNullOrEmpty(result))
+				throw new Exception("Не удалось ппрочитать результат выполнения запроса.");
+
+			var id = JsonConvert.DeserializeObject(result);
+
+			if (id == null)
+				throw new Exception("Не удалось получить идентификатор процесса скачивания.");
+		}
+
+		private async Task<string> SendRequest(string url, StringContent content)
+		{
 			// Выполняем запрос на Rdev
-			using (var response = await client.PostAsync(rdevUrl, new StringContent("{\"test\": \"testValue \"}", Encoding.UTF8, "application/json")).ConfigureAwait(false))
+			using (var response = await client.PostAsync(url, content).ConfigureAwait(false))
 			{
 				if (response.StatusCode != HttpStatusCode.OK)
-				{
-					logger.Warning("Тестовый запрос вернул ошибку, как и ожидалось.");
-					throw new Exception($"Вернулся статус код: {response.StatusCode}.");
-				}
+					throw new Exception(await response.Content.ReadAsStringAsync());
+
+				return await response.Content.ReadAsStringAsync();
 			}
 		}
 	}

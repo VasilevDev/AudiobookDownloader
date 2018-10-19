@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using AudiobookDownloader.Repository;
 using AudiobookDownloader.Logging;
 using AudiobookDownloader.Entity;
+using AudiobookDownloader.Process;
 
 namespace AudiobookDownloader
 {
@@ -52,42 +53,8 @@ namespace AudiobookDownloader
 		{
 			try
 			{
-				// Количество скаченных со страницы аудиокниг
-				int countDownloaded = 0;
-
-				// Формируем объект категории "Новинки"
-				var novelty = new Category { Name = "Новинки", Url = baseUrl };
-
-				logger.Debug("Получаем общее количество страниц в категории Новинки.");
-
-				// Получаем общее количество страниц на сайте в категории "Новинки"
-				int countPage = await service.GetPagesCount(novelty);
-
-				// Запускаем цикл обхода страниц с книгам начиная с конца (самые новые книги находятся на 1 странице)
-				for (int page = countPage; page >= 1; page--)
-				{
-					logger.Debug($"Получаем количество аудиокниг со страницы {page}.");
-
-					// Получаем  список аудиокниг со страницы
-					var audiobooks = await service.GetAudiobooks(novelty, page);
-
-					logger.Debug($"Количество аудиокниг на странице {page}: {audiobooks.Count}.");
-
-					// Запускаем цикл на последовательное скачивание аудиокниг со страницы
-					foreach (var audiobook in audiobooks)
-					{
-						logger.Log($"Загружаем аудиокнигу: {audiobook.Name}.");
-
-						await grabber.Grab(audiobook);
-						++countDownloaded;
-
-						logger.Success($"Аудиокнига {audiobook.Name} загружена, " +
-							$"оставшееся количество аудиокниг на странице {audiobooks.Count - countDownloaded}."
-						);
-					}
-
-					countDownloaded = 0;
-				}
+				var proc = new DownloadAndUploadProc(service, logger, grabber, baseUrl);
+				await proc.DownloadAsync();
 			}
 			catch (Exception ex)
 			{
@@ -96,7 +63,7 @@ namespace AudiobookDownloader
 		}
 
 		/// <summary>
-		/// Метод запускает загрузку файлов на стороне Rdev-а (на момент 2018-10-04 не используется)
+		/// Метод запускает загрузку файлов на стороне Rdev-а
 		/// </summary>
 		/// <param name="sender"></param>
 		/// <param name="e"></param>
@@ -104,34 +71,8 @@ namespace AudiobookDownloader
 		{
 			try
 			{
-				var novelty = new Category { Name = "Новинки", Url = baseUrl };
-
-				int countPage = await service.GetPagesCount(novelty);
-
-				logger.Debug($"Запущена загрузка аудиокнги с сайта {novelty.Url}, количество страниц {countPage}.");
-
-				for (int page = countPage; page >= 1; page--)
-				{
-					var audiobooks = await service.GetAudiobooks(novelty, page);
-
-					logger.Debug($"Страница {page}, количество книг на странице {audiobooks.Count}.");
-
-					foreach (var audiobook in audiobooks)
-					{
-						int audiobookId = await service.GetAudiobookId(audiobook);
-						audiobook.DownloadUrl = $"{baseUrl}/download/{audiobookId}";
-
-						logger.Debug($"Попытка загрузить аудиокнигу {audiobook.Name}.");
-
-						await client.StartDownload(
-							audiobook.Name, 
-							audiobook.Url, 
-							$"{baseUrl}/download/{audiobookId}"
-						);
-
-						logger.Success($"Книга {audiobook.Name} загружена.");
-					}
-				}
+				var proc = new RdevDownloadProc(service, db, logger, client, baseUrl);
+				await proc.DownloadAsync();
 			}
 			catch (Exception ex)
 			{

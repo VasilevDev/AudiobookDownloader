@@ -148,6 +148,9 @@
     <Compile Include="AudiobookDownloader.Designer.cs">
       <DependentUpon>AudiobookDownloader.cs</DependentUpon>
     </Compile>
+    <Compile Include="Process\DownloadAndUploadProc.cs" />
+    <Compile Include="Process\IDownloadProc.cs" />
+    <Compile Include="Process\RdevDownloadProc.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DatabaseContext\Context.cs" />

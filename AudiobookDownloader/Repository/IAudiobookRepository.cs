@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace AudiobookDownloader.Repository
 {
-	interface IAudiobookRepository
+	public interface IAudiobookRepository
 	{
 		/// <summary>
 		/// Метод проверяет была ли загружена аудиокнига
