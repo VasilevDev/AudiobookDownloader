@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace AudiobookDownloader.Service
 {
-	interface IAudiobookService
+	public interface IAudiobookService
 	{
 		/// <summary>
 		/// Метод получает из html разметки список категорий

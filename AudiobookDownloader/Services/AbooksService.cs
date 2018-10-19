@@ -9,6 +9,7 @@ using System.Configuration;
 using AudiobookDownloader.Logging;
 using System.Net.Http;
 using AudiobookDownloader.Entity;
+using System.Linq;
 
 namespace AudiobookDownloader.Service
 {
@@ -101,6 +102,10 @@ namespace AudiobookDownloader.Service
 
 			// Получаем идентификатор книги, по которому будет произведено обращение на скачивание
 			int id = await GetAudiobookId(audiobook);
+
+			if (id == -1)
+				throw new Exception("Не удалось получить id.");
+
 			string downloadUrl = $"{baseUrl}/download/{id}";
 
 			logger.Log($"Формируем ссылку для загрузки аудиокниги: {audiobook.Name}.");
@@ -170,7 +175,12 @@ namespace AudiobookDownloader.Service
 			var parseResult = htmlParser.Parse(html);
 
 			// Получаем значение идентификатора указанной книги
-			string uri = parseResult.GetElementsByClassName("button button_js button_orange")[0].GetAttribute("href");
+			var downloadButtons = parseResult.GetElementsByClassName("button button_js button_orange");
+
+			if (downloadButtons == null || !downloadButtons.Any())
+				return -1;
+
+			string uri = downloadButtons[0].GetAttribute("href");
 			Int32.TryParse(HttpUtility.ParseQueryString(new Uri(uri).Query).Get("book_id"), out int id);
 
 			return id;
